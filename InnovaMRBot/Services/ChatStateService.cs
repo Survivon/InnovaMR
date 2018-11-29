@@ -144,7 +144,7 @@ namespace InnovaMRBot.Services
                 needUser = savedUser;
             }
 
-            var message = context.Activity.Text;
+            var messageId = context.Activity.ReplyToId;
 
             foreach (var messageReaction in reactions)
             {

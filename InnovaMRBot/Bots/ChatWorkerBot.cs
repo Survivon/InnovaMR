@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Bot.Schema;
 
 namespace InnovaMRBot.Bots
 {
@@ -26,7 +27,13 @@ namespace InnovaMRBot.Bots
 
         public async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = new CancellationToken())
         {
-
+            if(turnContext.Activity.Type == ActivityTypes.Message)
+                await turnContext.SendActivityAsync(new Activity()
+                {
+                    ReplyToId = turnContext.Activity.Id,
+                    Text = "some text",
+                    Type = ActivityTypes.Message,
+                });
         }
     }
 }
