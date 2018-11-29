@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 using System.Collections.Generic;
 
 namespace InnovaMRBot.Models
@@ -8,13 +8,17 @@ namespace InnovaMRBot.Models
         public ConversationSetting()
         {
             ListOfMerge = new List<MergeSetting>();
+            Id = Guid.NewGuid();
+            Admins = new List<User>();
         }
 
-        public bool IsMergeRequestConversation { get; set; }
+        public Guid Id { get; set; }
 
-        public string ConversationId { get; set; }
+        public ChatSetting AlertChat { get; set; }
 
-        public bool CanWriteToConversation { get; set; }
+        public ChatSetting MRChat { get; set; }
+
+        public List<User> Admins { get; set; }
 
         public List<MergeSetting> ListOfMerge { get; set; }
     }

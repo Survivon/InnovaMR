@@ -2,8 +2,10 @@
 {
     public class ResponseMessage
     {
-        public string ConversationId { get; set; }
+        public ChatSetting ConversationId { get; set; }
 
         public string Message { get; set; }
+
+        public string ReplyMessageId { get; set; }
     }
 }

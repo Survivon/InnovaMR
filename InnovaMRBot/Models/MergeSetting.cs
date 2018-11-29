@@ -24,5 +24,9 @@ namespace InnovaMRBot.Models
         public DateTimeOffset? PublishDate { get; set; }
 
         public List<MessageReaction> Reactions { get; set; }
+
+        public string Id { get; set; }
+
+        public User Owner { get; set; }
     }
 }
