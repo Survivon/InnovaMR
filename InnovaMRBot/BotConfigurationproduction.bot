@@ -1,0 +1,15 @@
+﻿{
+  "name": "InnovaMRBot",
+  "services": [
+    {
+      "type": "endpoint",
+      "name": "production",
+      "endpoint": "https://innovamrbot.azurewebsites.net/api/messages",
+      "appId": "0fea4dbf-4bbf-471c-89fe-0c919875de59",
+      "appPassword": "axzgBDAX76?)^oxvBUF135(",
+      "id": "1"
+    }
+  ],
+  "padlock": "",
+  "version": "2.0"
+}

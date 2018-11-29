@@ -43,10 +43,11 @@ namespace InnovaMRBot
                 var secretKey = Configuration.GetSection("botFileSecret")?.Value;
                 var botFilePath = Configuration.GetSection("botFilePath")?.Value;
 
-                var botConfig = BotConfiguration.Load(botFilePath ?? @".\BotConfiguration.bot", secretKey);
+                var environment = _isProduction ? "production" : "development";
+
+                var botConfig = BotConfiguration.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
                 services.AddSingleton(sp => botConfig ?? throw new InvalidOperationException($"The .bot config file could not be loaded. ({botConfig})"));
 
-                var environment = _isProduction ? "production" : "development";
                 var service = botConfig.Services.Where(s => s.Type == "endpoint" && s.Name == environment).FirstOrDefault();
                 if (!(service is EndpointService endpointService))
                 {

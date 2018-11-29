@@ -6,11 +6,24 @@
     <ApplicationIcon>photographer.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="BotConfigurationproduction.bot" />
+    <None Remove="MRIcon.png" />
+  </ItemGroup>
+
 
   <ItemGroup>
-    <Content Include="BotConfiguration.bot">
+    <Content Include="BotConfigurationproduction.bot">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="BotConfigurationdevelopment.bot">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <EmbeddedResource Include="MRIcon.png" />
   </ItemGroup>
 
 

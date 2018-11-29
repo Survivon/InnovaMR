@@ -34,6 +34,8 @@ namespace InnovaMRBot.Bots
                     Text = "some text",
                     Type = ActivityTypes.Message,
                 });
+
+            //await turnContext.SendActivityAsync("");
         }
     }
 }
