@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <CodeAnalysisRuleSet>EchoBotWithCounter.ruleset</CodeAnalysisRuleSet>
     <ApplicationIcon>photographer.ico</ApplicationIcon>
+    <UserSecretsId>fef54123-d176-4e19-a771-6256ebf95b28</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

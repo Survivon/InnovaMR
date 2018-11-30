@@ -1,15 +1,14 @@
-﻿{
-  "name": "InnovaMRBot",
-  "services": [
-    {
-      "type": "endpoint",
-      "name": "development",
-      "endpoint": "http://localhost:3978/api/messages",
-      "appId": "",
-      "appPassword": "",
-      "id": "1"
-    }
-  ],
-  "padlock": "",
-  "version": "2.0"
+{
+    "name": "InnovaMRBot",
+    "description": "",
+    "services": [
+      {
+        "type": "endpoint",
+        "endpoint": "http://localhost:59690/api/messages",
+        "name": "development",
+        "id": "22"
+      }
+    ],
+    "padlock": "",
+    "version": "2.0"
 }

@@ -16,9 +16,7 @@ namespace InnovaMRBot.Services
     public class ChatStateService
     {
         #region Constants
-
-        private const string BOT_NAME = "InnovaBot";
-
+        
         private const string MARK_MR_CONVERSATION = "/start MR chat";
 
         private const string MARK_ALERT_CONVERSATION = "/start alert chat";
@@ -72,42 +70,42 @@ namespace InnovaMRBot.Services
             {
                 var message = turnContext.Activity.Text;
 
-                if (message.Equals($"{BOT_NAME} {MARK_MR_CONVERSATION}"))
+                if (message.Equals($"{MARK_MR_CONVERSATION}"))
                 {
                     return await SetupMRConversationAsync(turnContext);
                 }
-                else if (new Regex(GUID_PATTERN).IsMatch(message) && message.StartsWith($"{BOT_NAME} {MARK_ALERT_CONVERSATION}"))
+                else if (new Regex(GUID_PATTERN).IsMatch(message) && message.StartsWith($"{MARK_ALERT_CONVERSATION}"))
                 {
                     if (Guid.TryParse(new Regex(GUID_PATTERN).Match(message).Value, out var syncId))
                         return await SetupAlertConversationAsync(turnContext, syncId);
                     else return new ResponseMessage();
                 }
-                else if(message.Equals($"{BOT_NAME} {REMOVE_MR_CONVERSATION}"))
+                else if(message.Equals($"{REMOVE_MR_CONVERSATION}"))
                 {
                     return await RemoveMrConversationAsync(turnContext);
                 }
-                else if (message.Equals($"{BOT_NAME} {REMOVE_ALERT_CONVERSATION}"))
+                else if (message.Equals($"{REMOVE_ALERT_CONVERSATION}"))
                 {
                     return await RemoveAlertConversationAsync(turnContext);
                 }
-                else if (message.Equals($"{BOT_NAME} {SETUP_ADMIN}"))
+                else if (message.Equals($"{SETUP_ADMIN}"))
                 {
                     return await AddAdminAsync(turnContext);
                 }
-                else if (message.Equals($"{BOT_NAME} {REMOVE_ADMIN}"))
+                else if (message.Equals($"{REMOVE_ADMIN}"))
                 {
                     return await RemoveAdminAsync(turnContext);
                 }
-                else if(message.StartsWith($"{BOT_NAME} {GET_STATISTIC}"))
+                else if(message.StartsWith($"{GET_STATISTIC}"))
                 {
                     
                     return new ResponseMessage();
                 }
-                else if(message.Equals($"{BOT_NAME} {GET_UNMARKED_MR}"))
+                else if(message.Equals($"{GET_UNMARKED_MR}"))
                 {
                     return await GetUnMarkedMergeRequestAsync(turnContext);
                 }
-                else if(message.Equals($"{BOT_NAME} {GET_MY_UNMARKED_MR}"))
+                else if(message.Equals($"{GET_MY_UNMARKED_MR}"))
                 {
                     return await GetMyUnMarkedMergeRequestAsync(turnContext);
                 }

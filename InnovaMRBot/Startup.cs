@@ -61,7 +61,9 @@ namespace InnovaMRBot
                 options.OnTurnError = async (context, exception) =>
                 {
                     logger.LogError($"Exception caught : {exception}");
-                    await context.SendActivityAsync("Sorry, it looks like something went wrong.");
+                    var ss = exception.Data;
+                    var dd = exception.Source;
+                    await context.SendActivityAsync($"{exception.Message} \n \n {exception.StackTrace}");
                 };
 
                 IStorage dataStore = new MemoryStorage();
