@@ -6,17 +6,21 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using InnovaMRBot.Controllers;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Models;
 using Microsoft.Bot.Builder;
+using Microsoft.Bot.Connector;
 using Microsoft.Bot.Schema;
+using Newtonsoft.Json;
+using Conversations = InnovaMRBot.Models.Conversations;
 
 namespace InnovaMRBot.Services
 {
     public class ChatStateService
     {
         #region Constants
-        
+
         private const string MARK_MR_CONVERSATION = "/start MR chat";
 
         private const string MARK_ALERT_CONVERSATION = "/start alert chat";
@@ -34,6 +38,8 @@ namespace InnovaMRBot.Services
         private const string GET_UNMARKED_MR = "/get MR";
 
         private const string GET_MY_UNMARKED_MR = "/get my MR";
+
+        private const string START_READ_ALL_MESSAGE = "/get all message";
 
         private const string MR_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/[0-9]+";
 
@@ -62,15 +68,15 @@ namespace InnovaMRBot.Services
             ConversationState = conversationState ?? throw new ArgumentNullException(nameof(conversationState));
         }
 
-        public async Task<ResponseMessage> ReturnMessage(ITurnContext turnContext)
+        public async Task<Activity> ReturnMessage(ITurnContext turnContext)
         {
-            var returnMessage = new ResponseMessage();
+            var returnMessage = new Activity();
 
             if (turnContext.Activity.Type == ActivityTypes.Message)
             {
                 var message = turnContext.Activity.Text;
 
-                if (message.Equals($"{MARK_MR_CONVERSATION}"))
+                if (message.Equals(MARK_MR_CONVERSATION))
                 {
                     return await SetupMRConversationAsync(turnContext);
                 }
@@ -78,36 +84,39 @@ namespace InnovaMRBot.Services
                 {
                     if (Guid.TryParse(new Regex(GUID_PATTERN).Match(message).Value, out var syncId))
                         return await SetupAlertConversationAsync(turnContext, syncId);
-                    else return new ResponseMessage();
+                    else return turnContext.Activity.CreateReply();
                 }
-                else if(message.Equals($"{REMOVE_MR_CONVERSATION}"))
+                else if (message.Equals(REMOVE_MR_CONVERSATION))
                 {
                     return await RemoveMrConversationAsync(turnContext);
                 }
-                else if (message.Equals($"{REMOVE_ALERT_CONVERSATION}"))
+                else if (message.Equals(REMOVE_ALERT_CONVERSATION))
                 {
                     return await RemoveAlertConversationAsync(turnContext);
                 }
-                else if (message.Equals($"{SETUP_ADMIN}"))
+                else if (message.Equals(SETUP_ADMIN))
                 {
                     return await AddAdminAsync(turnContext);
                 }
-                else if (message.Equals($"{REMOVE_ADMIN}"))
+                else if (message.Equals(REMOVE_ADMIN))
                 {
                     return await RemoveAdminAsync(turnContext);
                 }
-                else if(message.StartsWith($"{GET_STATISTIC}"))
+                else if (message.StartsWith(GET_STATISTIC))
                 {
-                    
-                    return new ResponseMessage();
+                    return await GetStatisticsAsync(turnContext);
                 }
-                else if(message.Equals($"{GET_UNMARKED_MR}"))
+                else if (message.Equals(GET_UNMARKED_MR))
                 {
                     return await GetUnMarkedMergeRequestAsync(turnContext);
                 }
-                else if(message.Equals($"{GET_MY_UNMARKED_MR}"))
+                else if (message.Equals(GET_MY_UNMARKED_MR))
                 {
                     return await GetMyUnMarkedMergeRequestAsync(turnContext);
+                }
+                else if (message.Equals(START_READ_ALL_MESSAGE))
+                {
+                    return await GetAllMessageAsync(turnContext);
                 }
                 else
                 {
@@ -152,17 +161,12 @@ namespace InnovaMRBot.Services
 
         #region Conversation setup
 
-        private async Task<ResponseMessage> RemoveAlertConversationAsync(ITurnContext context)
+        private async Task<Activity> RemoveAlertConversationAsync(ITurnContext context)
         {
             var convesationId = context.Activity.Conversation.Id;
             var userId = context.Activity.From.Id;
-            var responseMessage = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = convesationId,
-                },
-            };
+            var responseMessage = context.Activity.CreateReply();
+            responseMessage.TextFormat = "plain";
 
             var users = await GetUsersAsync();
             var needUser = users.Users.FirstOrDefault(u => u.UserId.Equals(userId));
@@ -181,38 +185,67 @@ namespace InnovaMRBot.Services
             var needConversation = conversations.BotConversation.FirstOrDefault(c => c.AlertChat.Id.Equals(convesationId));
             if (needConversation == null)
             {
-                responseMessage.Message =
+                responseMessage.Text =
                     "This is not a Alert conversation or you don't add any conversation. Try in Alert conversation ;)";
             }
             else
             {
                 if (needConversation.Admins.Any(u => u.UserId.Equals(userId)))
                 {
-                    responseMessage.Message = $"Congratulation, you remove alert conversation. Please setup alert conversation by sync id: {needConversation.MRChat.SyncId}";
+                    responseMessage.Text = $"Congratulation, you remove alert conversation. Please setup alert conversation by sync id: {needConversation.MRChat.SyncId}";
 
                     needConversation.AlertChat = null;
                     await SaveConversationAsync(needConversation);
                 }
                 else
                 {
-                    responseMessage.Message = "You don't have permission for remove this conversation!";
+                    responseMessage.Text = "You don't have permission for remove this conversation!";
                 }
             }
 
             return responseMessage;
         }
 
-        private async Task<ResponseMessage> RemoveMrConversationAsync(ITurnContext context)
+        private async Task<Activity> GetAllMessageAsync(ITurnContext context)
+        {
+            var activiti = context.Activity.CreateReply();
+            activiti.TextFormat = "plain";
+            var connector = new ConnectorClient(new Uri(context.Activity.ServiceUrl));
+
+            string token = null;
+            var res = new List<ConversationMembers>();
+
+            do
+            {
+                var conv = connector.Conversations as Microsoft.Bot.Connector.Conversations;
+                var results = await conv.GetConversationsWithHttpMessagesAsync(token);
+                token = results.Body.ContinuationToken;
+
+                res.AddRange(results.Body.Conversations);
+                //foreach (var conversationMemberse in results.Body.Conversations)
+                //{
+                //    foreach (var conversationMemberseMember in conversationMemberse.Members)
+                //    {
+                        
+                //    }
+                //}
+
+            } while (!string.IsNullOrEmpty(token));
+
+            var str = JsonConvert.SerializeObject(res, Formatting.Indented,
+                new JsonSerializerSettings() {TypeNameHandling = TypeNameHandling.All});
+
+            activiti.Text = str;
+            
+            return activiti;
+        }
+
+        private async Task<Activity> RemoveMrConversationAsync(ITurnContext context)
         {
             var convesationId = context.Activity.Conversation.Id;
             var userId = context.Activity.From.Id;
-            var responseMessage = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = convesationId,
-                },
-            };
+            var responseMessage = context.Activity.CreateReply();
+            responseMessage.TextFormat = "plain";
 
             var users = await GetUsersAsync();
             var needUser = users.Users.FirstOrDefault(u => u.UserId.Equals(userId));
@@ -232,44 +265,31 @@ namespace InnovaMRBot.Services
             var needConversation = conversations.BotConversation.FirstOrDefault(c => c.MRChat.Id.Equals(convesationId));
             if (needConversation == null)
             {
-                responseMessage.Message =
+                responseMessage.Text =
                     "This is not a MR's conversation or you don't add any conversation. Try in MR's conversation ;)";
             }
             else
             {
                 if (needConversation.Admins.Any(u => u.UserId.Equals(userId)))
                 {
-                    responseMessage.Message = "Congratulation, you remove all data with linked for current conversation";
+                    responseMessage.Text = "Congratulation, you remove all data with linked for current conversation";
                     // TODO: add get stat and send before remove
                     await RemoveConversationAsync(needConversation);
                 }
                 else
                 {
-                    responseMessage.Message = "You don't have permission for remove this conversation!";
+                    responseMessage.Text = "You don't have permission for remove this conversation!";
                 }
             }
 
             return responseMessage;
         }
 
-        private async Task<ResponseMessage> SetupMRConversationAsync(ITurnContext context)
+        private async Task<Activity> SetupMRConversationAsync(ITurnContext context)
         {
             var conversationId = context.Activity.Conversation.Id;
 
-            var resultMessage = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = conversationId,
-                },
-            };
-
-            //var isGroup = context.Activity.Conversation.IsGroup;
-
-            //if (!isGroup.HasValue || !isGroup.Value)
-            //{
-            //    return "This is not group conversation";
-            //}
+            var resultMessage = context.Activity.CreateReply();
 
             var conversations = await GetCurrentConversationsAsync();
 
@@ -282,6 +302,7 @@ namespace InnovaMRBot.Services
                     IsMRChat = true,
                     SyncId = syncId,
                     Name = context.Activity.Conversation.Name,
+                    BaseActivity = context.Activity,
                 };
 
                 var newConversation = new ConversationSetting()
@@ -291,28 +312,23 @@ namespace InnovaMRBot.Services
 
                 await SaveConversationAsync(newConversation);
 
-                resultMessage.Message = $"Current chat is setup as MR with sync id: {syncId}";
+                resultMessage.Text = $"Current chat is setup as MR with sync id: {syncId}";
             }
 
             return resultMessage;
         }
 
-        private async Task<ResponseMessage> SetupAlertConversationAsync(ITurnContext context, Guid syncId)
+        private async Task<Activity> SetupAlertConversationAsync(ITurnContext context, Guid syncId)
         {
             var conversationId = context.Activity.Conversation.Id;
-            var responseMessage = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = conversationId,
-                },
-            };
+            var responseMessage = context.Activity.CreateReply();
+            responseMessage.TextFormat = "plain";
 
             var conversations = await GetCurrentConversationsAsync();
 
             if (!conversations.BotConversation.Any())
             {
-                responseMessage.Message = "Have not setup any conversation to Bot :)";
+                responseMessage.Text = "Have not setup any conversation to Bot :)";
             }
             else
             {
@@ -320,7 +336,7 @@ namespace InnovaMRBot.Services
                     conversations.BotConversation.FirstOrDefault(c => c.MRChat.SyncId.Equals(syncId));
                 if (neededConversation == null)
                 {
-                    responseMessage.Message = $"Didn't setup MR chat for current sync id: {syncId}";
+                    responseMessage.Text = $"Didn't setup MR chat for current sync id: {syncId}";
                 }
                 else
                 {
@@ -330,28 +346,22 @@ namespace InnovaMRBot.Services
                         IsAlertChat = true,
                         SyncId = syncId,
                         Name = context.Activity.Conversation.Name,
+                        BaseActivity = context.Activity,
                     };
 
                     await SaveConversationAsync(neededConversation);
-                    responseMessage.Message = $"This chat is setup as alert chat for conversation {neededConversation.MRChat.Name}";
+                    responseMessage.Text = $"This chat is setup as alert chat for conversation {neededConversation.MRChat.Name}";
                 }
             }
 
             return responseMessage;
         }
 
-        private async Task<ResponseMessage> AddAdminAsync(ITurnContext context)
+        private async Task<Activity> AddAdminAsync(ITurnContext context)
         {
-            var conversationId = context.Activity.Conversation.Id;
-            var responseMessage = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = conversationId,
-                },
-            };
+            var responseMessage = new Activity();
 
-            var message = await GetMessageWithCheckChatAsync(
+            responseMessage = await GetMessageWithCheckChatAsync(
                 async (conversation) =>
             {
                 if (conversation.Admins.Count >= MAX_COUNT_OF_ADMINS)
@@ -383,23 +393,14 @@ namespace InnovaMRBot.Services
                 }
             }, context);
 
-            responseMessage.Message = message;
-
             return responseMessage;
         }
 
-        private async Task<ResponseMessage> RemoveAdminAsync(ITurnContext context)
+        private async Task<Activity> RemoveAdminAsync(ITurnContext context)
         {
-            var conversationId = context.Activity.Conversation.Id;
-            var responseMessage = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = conversationId,
-                },
-            };
+            var responseMessage = new Activity();
 
-            var message = await GetMessageWithCheckChatAsync(
+            responseMessage = await GetMessageWithCheckChatAsync(
                 async (conversation) =>
                 {
                     var users = await GetUsersAsync();
@@ -423,10 +424,8 @@ namespace InnovaMRBot.Services
                         return "You have been removed from admin of current conversation";
                     }
 
-                    return $"Good joke xD You are admin of chat. Try next time";
+                    return $"Good joke xD You are admin of chat. Try next time ;)";
                 }, context);
-
-            responseMessage.Message = message;
 
             return responseMessage;
         }
@@ -435,17 +434,11 @@ namespace InnovaMRBot.Services
 
         #region Merge Requst
 
-        private async Task<ResponseMessage> GetMrMessageAsync(ITurnContext context)
+        private async Task<Activity> GetMrMessageAsync(ITurnContext context)
         {
             var userId = context.Activity.From.Id;
-            var conversationId = context.Activity.Conversation.Id;
-            var responseMessage = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = conversationId,
-                },
-            };
+            var responseMessage = context.Activity.CreateReply(string.Empty);
+            responseMessage.TextFormat = "plain";
 
             var messageText = context.Activity.Text;
 
@@ -466,6 +459,13 @@ namespace InnovaMRBot.Services
 
                 needMr.IsHadAlreadyChange = true;
                 needMr.CountOfChange++;
+
+                needMr.VersionedSetting.Add(new VersionedMergeRequest()
+                {
+                    OwnerMergeId = needMr.Id,
+                    PublishDate = context.Activity.Timestamp ?? DateTimeOffset.UtcNow,
+                    Id = context.Activity.Id,
+                });
 
                 await SaveConversationAsync(conversation);
             }
@@ -500,7 +500,8 @@ namespace InnovaMRBot.Services
                     description = description.Replace(ticketMatch.Value, string.Empty);
                 }
 
-                mrMessage.PublishDate = context.Activity.Timestamp;
+                mrMessage.PublishDate = context.Activity.Timestamp ?? DateTimeOffset.UtcNow;
+                mrMessage.Id = context.Activity.Id;
 
                 var lineOfMessage = description.Split('\r').ToList();
                 var firstLine = lineOfMessage.FirstOrDefault();
@@ -511,7 +512,7 @@ namespace InnovaMRBot.Services
                     description = string.Join('\r', lineOfMessage);
                 }
 
-                mrMessage.Description = description.Trim(new char[]{'\r','\n'});
+                mrMessage.Description = description.Trim(new char[] { '\r', '\n' });
                 mrMessage.Owner = needUser;
 
                 conversation.ListOfMerge.Add(mrMessage);
@@ -522,17 +523,9 @@ namespace InnovaMRBot.Services
             return responseMessage;
         }
 
-        private async Task<ResponseMessage> GetUnMarkedMergeRequestAsync(ITurnContext context)
+        private async Task<Activity> GetUnMarkedMergeRequestAsync(ITurnContext context)
         {
-            var responseMessages = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = context.Activity.Conversation.Id,
-                },
-            };
-
-            var message = await GetMessageWithCheckChatAsync(
+            var responseMessages = await GetMessageWithCheckChatAsync(
                 async (conversation) =>
                 {
                     var mrs = conversation.ListOfMerge.Where(m => m.Reactions.Count < 2).ToList();
@@ -562,30 +555,22 @@ Thanks :)
                     return builder.ToString();
                 }, context);
 
-            responseMessages.Message = message;
+
             return responseMessages;
         }
 
-        private async Task<ResponseMessage> GetMyUnMarkedMergeRequestAsync(ITurnContext context)
+        private async Task<Activity> GetMyUnMarkedMergeRequestAsync(ITurnContext context)
         {
             var userId = context.Activity.From.Id;
 
-            var responseMessages = new ResponseMessage()
-            {
-                ConversationId = new ChatSetting()
-                {
-                    Id = context.Activity.Conversation.Id,
-                },
-            };
-
-            var message = await GetMessageWithCheckChatAsync(
+            var responseMessages = await GetMessageWithCheckChatAsync(
                 async (conversation) =>
                 {
                     var mrs = conversation.ListOfMerge.Where(m => m.Reactions.Count < 2 && m.Owner.UserId.Equals(userId)).ToList();
 
                     if (!mrs.Any())
                     {
-                        return "Good job guys, you don't have any merge request which must be reviewed :)";
+                        return "Good job, you don't have any merge request which must be reviewed :)";
                     }
 
                     var builder = new StringBuilder();
@@ -608,7 +593,7 @@ Thanks :)
                     return builder.ToString();
                 }, context);
 
-            responseMessages.Message = message;
+
             return responseMessages;
         }
 
@@ -616,17 +601,73 @@ Thanks :)
 
         #region Stats
 
+        private async Task<Activity> GetStatisticsAsync(ITurnContext context)
+        {
+            var responseMessage = await GetMessageWithCheckChatAsync(
+                async (conversation) =>
+                {
+                    var message = context.Activity.Text;
+                    message = message.Replace(GET_STATISTIC, string.Empty);
+                    var components = message.Split(' ');
+                    var command = components[0];
+                    var startDate = default(DateTimeOffset);
+                    if (components.Length > 1)
+                    {
+                        startDate = new DateTimeOffset(Convert.ToDateTime(components[1]));
+                    }
 
+                    var endDate = default(DateTimeOffset);
+                    if (components.Length > 2)
+                    {
+                        endDate = new DateTimeOffset(Convert.ToDateTime(components[2]));
+                    }
+
+                    var result = new ResponseMessage();
+
+                    switch (command)
+                    {
+                        case "getalldata":
+                            result = StatHtmlBuilder.GetAllData(conversation.ListOfMerge, startDate, endDate);
+                            break;
+                        case "getmrreaction":
+                            result = StatHtmlBuilder.GetMRReaction(conversation.ListOfMerge, startDate, endDate);
+                            break;
+                        case "getusermrreaction":
+                            result = StatHtmlBuilder.GetUsersMRReaction(conversation.ListOfMerge, startDate, endDate);
+                            break;
+                        case "getunmarked":
+                            result = StatHtmlBuilder.GetUnmarkedCountMergePerDay(conversation.ListOfMerge, startDate,
+                                endDate);
+                            break;
+                    }
+                    
+                    return result.Message;
+                }, context);
+
+            responseMessage.TextFormat = "plain";
+
+            responseMessage.Attachments = new List<Attachment>()
+            {
+                new Attachment()
+                {
+                    Name = "Stat",
+                    ContentUrl = responseMessage.Text,
+                    ContentType = DownlodController.GetContentType(responseMessage.Text),
+                },
+            };
+
+            return responseMessage;
+        }
 
         #endregion
 
         #region Helpers
 
-        private async Task<string> GetMessageWithCheckChatAsync(Func<ConversationSetting, Task<string>> successAction, ITurnContext context)
+        private async Task<Activity> GetMessageWithCheckChatAsync(Func<ConversationSetting, Task<string>> successAction, ITurnContext context)
         {
             var conversationId = context.Activity.Conversation.Id;
 
-            var results = string.Empty;
+            var activity = new Activity();
 
             var conversations = await GetCurrentConversationsAsync();
 
@@ -640,21 +681,27 @@ Thanks :)
                         conversations.BotConversation.FirstOrDefault(c => c.MRChat.Id.Equals(conversationId));
                     if (mrConversation != null)
                     {
-                        results =
+                        activity = mrConversation.MRChat.BaseActivity.CreateReply();
+                        activity.Text =
                             $"This is not conversation for input command, please select conversation named {mrConversation.AlertChat?.Name ?? string.Empty}";
+                        activity.TextFormat = "plain";
                     }
                     else
                     {
-                        results = "I don't know why are you want to do something in useless conversation :(";
+                        activity = context.Activity.CreateReply();
+                        activity.Text = "I don't know why are you want to do something in useless conversation :(";
+                        activity.TextFormat = "plain";
                     }
                 }
                 else
                 {
-                    results = await successAction.Invoke(conversation);
+                    activity = conversation.AlertChat.BaseActivity.CreateReply();
+                    activity.Text = await successAction.Invoke(conversation);
+                    activity.TextFormat = "plain";
                 }
             }
 
-            return results;
+            return activity;
         }
 
         private async Task<bool> IsMrContainceAsync(string mrUrl, string chatId)

@@ -61,9 +61,11 @@ namespace InnovaMRBot
                 options.OnTurnError = async (context, exception) =>
                 {
                     logger.LogError($"Exception caught : {exception}");
-                    var ss = exception.Data;
-                    var dd = exception.Source;
-                    await context.SendActivityAsync($"{exception.Message} \n \n {exception.StackTrace}");
+                    #if DEBUG
+                        await context.SendActivityAsync($"{exception.Message} \n \n {exception.StackTrace}");
+                    #else
+                        await context.SendActivityAsync($"Something went wrong :(");
+                    #endif
                 };
 
                 IStorage dataStore = new MemoryStorage();
@@ -91,6 +93,8 @@ namespace InnovaMRBot
 
                 return accessors;
             });
+
+            services.AddMvc();
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
@@ -99,7 +103,12 @@ namespace InnovaMRBot
 
             app.UseDefaultFiles()
                 .UseStaticFiles()
-                .UseBotFramework();
+                .UseBotFramework().UseMvc(routes =>
+                {
+                    routes.MapRoute(
+                        name: "default",
+                        template: "{controller=Home}/{action=Index}/{id?}");
+                });
         }
     }
 }

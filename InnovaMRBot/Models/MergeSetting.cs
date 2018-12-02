@@ -9,6 +9,7 @@ namespace InnovaMRBot.Models
         {
             Reactions = new List<MessageReaction>();
             TicketsUrl = new List<string>();
+            VersionedSetting = new List<VersionedMergeRequest>();
         }
 
         public string MrUrl { get; set; }
@@ -28,5 +29,7 @@ namespace InnovaMRBot.Models
         public string Id { get; set; }
 
         public User Owner { get; set; }
+
+        public List<VersionedMergeRequest> VersionedSetting { get; set; }
     }
 }

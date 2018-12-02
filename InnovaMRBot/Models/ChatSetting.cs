@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.Bot.Schema;
 
 namespace InnovaMRBot.Models
 {
@@ -13,5 +14,7 @@ namespace InnovaMRBot.Models
         public Guid SyncId { get; set; }
 
         public string Name { get; set; }
+
+        public Activity BaseActivity { get; set; }
     }
 }

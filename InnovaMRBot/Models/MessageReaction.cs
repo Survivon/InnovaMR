@@ -9,5 +9,7 @@ namespace InnovaMRBot.Models
         public User User { get; set; }
 
         public string ReactionType { get; set; }
+
+        public int ReactionInMinutes { get; set; }
     }
 }

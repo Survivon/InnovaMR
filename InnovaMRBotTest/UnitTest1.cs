@@ -10,6 +10,7 @@ using Microsoft.Bot.Schema;
 using Newtonsoft.Json;
 using InnovaMRBot.Models;
 using Newtonsoft.Json.Linq;
+using MessageReaction = InnovaMRBot.Models.MessageReaction;
 
 namespace InnovaMRBotTest
 {
@@ -89,6 +90,180 @@ Nothing is saved in the database until the user clicks on Save.
             });
 
             await service.ReturnMessage(context);
+
+            Assert.True(true);
+        }
+
+        [Fact]
+        public void CheckCreateStat()
+        {
+            var merges = new List<MergeSetting>()
+            {
+                new MergeSetting()
+                {
+                    PublishDate = DateTimeOffset.Now,
+                    MrUrl = "some mr url Peter 1",
+                    Description = "some desc",
+                    Owner = new User()
+                    {
+                        Name = "Peter"
+                    },
+                    Reactions = new List<MessageReaction>()
+                    {
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Vasya"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        }
+                    },
+                    TicketsUrl = new List<string>()
+                    {
+                        "some ticket url"
+                    },
+                    
+                },
+                new MergeSetting()
+                {
+                    PublishDate = DateTimeOffset.Now,
+                    MrUrl = "some mr url Peter 2",
+                    Description = "some desc",
+                    Owner = new User()
+                    {
+                        Name = "Peter"
+                    },
+                    Reactions = new List<MessageReaction>()
+                    {
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Vasya"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        },
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Gosha"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        }
+                    },
+                    TicketsUrl = new List<string>()
+                    {
+                        "some ticket url 2"
+                    },
+
+                },
+                new MergeSetting()
+                {
+                    PublishDate = DateTimeOffset.Now,
+                    MrUrl = "some mr url Peter 3",
+                    Description = "some desc",
+                    Owner = new User()
+                    {
+                        Name = "Peter"
+                    },
+                    Reactions = new List<MessageReaction>()
+                    {
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Vasya"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        },
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Gosha"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        }
+                    },
+                    TicketsUrl = new List<string>()
+                    {
+                        "some ticket url 3"
+                    },
+                },
+
+                new MergeSetting()
+                {
+                    PublishDate = DateTimeOffset.Now,
+                    MrUrl = "some mr url Gosha 1",
+                    Description = "some desc",
+                    Owner = new User()
+                    {
+                        Name = "Gosha"
+                    },
+                    Reactions = new List<MessageReaction>()
+                    {
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Vasya"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        },
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Peter"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        }
+                    },
+                    TicketsUrl = new List<string>()
+                    {
+                        "some ticket url 1"
+                    },
+                },
+
+                new MergeSetting()
+                {
+                    PublishDate = DateTimeOffset.Now,
+                    MrUrl = "some mr url Vasya 1",
+                    Description = "some desc",
+                    Owner = new User()
+                    {
+                        Name = "Vasya"
+                    },
+                    Reactions = new List<MessageReaction>()
+                    {
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Peter"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        },
+                        new MessageReaction()
+                        {
+                            User = new User()
+                            {
+                                Name = "Gosha"
+                            },
+                            ReactionTime = DateTimeOffset.UtcNow
+                        }
+                    },
+                    TicketsUrl = new List<string>()
+                    {
+                        "some ticket url 1",
+                        "some ticket url 2"
+                    },
+                }
+            };
+
+            var res = StatHtmlBuilder.GetAllData(merges);
 
             Assert.True(true);
         }

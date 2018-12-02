@@ -7,5 +7,7 @@
         public string Message { get; set; }
 
         public string ReplyMessageId { get; set; }
+
+        public BotAttachment Attachment { get; set; }
     }
 }

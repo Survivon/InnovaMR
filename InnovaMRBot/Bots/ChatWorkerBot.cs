@@ -4,6 +4,7 @@ using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,49 +35,44 @@ namespace InnovaMRBot.Bots
                 var activity = turnContext.Activity;
 
                 var incomingMessage = activity.AsMessageActivity();
-                var mentionFound = (incomingMessage.Entities?.Where(entity => String.Compare(entity.Type, "mention", ignoreCase: true) == 0)
+                var mentionFound = (incomingMessage.Entities?.Where(entity => string.Compare(entity.Type, "mention", StringComparison.OrdinalIgnoreCase) == 0)
                                         .Select(e => e.Properties.ToObject<Mention>())
                                         .ToArray() ?? new Mention[0])
-                    .Where(mention => mention.Mentioned.Id == activity.Recipient.Id)
-                    .FirstOrDefault();
+                    .FirstOrDefault(mention => mention.Mentioned.Id == activity.Recipient.Id);
 
                 if (mentionFound != null)
                 {
                     foreach (var mention in activity.GetMentions().Where(mention => mention.Mentioned.Id == activity.Recipient.Id))
                     {
-                        int index = mention.Text.IndexOf('>');
+                        var index = mention.Text.IndexOf('>');
                         var nextIndex = mention.Text.IndexOf('<', index);
                         var mentionText = mention.Text.Substring(index + 1, nextIndex - index - 1);
-                        activity.Text = activity.Text.Replace(mentionText, "");
+                        activity.Text = activity.Text.Replace(mentionText, string.Empty);
                     }
                 }
 
                 var setting = JsonConvert.SerializeObject(activity, Formatting.Indented,
-                    settings: new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All, });
-
-                //var connector = new ConnectorClient(new Uri(activity.ServiceUrl));
-
-                //Activity reply = activity.CreateReply(setting);
-
-                //await connector.Conversations.ReplyToActivityAsync(reply);
-
-                var rr = activity.GetConversationReference();
-
+                    new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All, });
+                
                 var repl = activity.CreateReply();
 
                 repl.TextFormat = "plain";
                 repl.Text = setting;
 
-                await turnContext.SendActivityAsync(repl);
+                if (activity.Text.Equals("/get all message"))
+                {
+                    var act = await _service.ReturnMessage(turnContext);
+                    await turnContext.SendActivityAsync(act).ConfigureAwait(false);
+                    return;
+                }
 
-                //await SubscribeUser(turnContext.Adapter, rr, setting);
+                await turnContext.SendActivityAsync(repl);
             }
             else
             {
 
                 var setting = JsonConvert.SerializeObject(turnContext.Activity, Formatting.Indented,
                     settings: new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All, });
-
 
                 var repl = turnContext.Activity.CreateReply();
 
@@ -86,17 +82,5 @@ namespace InnovaMRBot.Bots
                 await turnContext.SendActivityAsync(repl);
             }
         }
-
-        private async Task SubscribeUser(BotAdapter adapter, ConversationReference reference, string message)
-        {
-            // Send a proactive message.
-            await adapter.ContinueConversationAsync(reference.Bot.Id, reference, new BotCallbackHandler(async delegate (ITurnContext context, CancellationToken token) { await context.SendActivityAsync(message); }), CancellationToken.None);
-        }
-
-        //private async void SubscribeUser(BotFrameworkAdapter adapter, string appId, ConversationReference reference)
-        //{
-        //    // Send a proactive message.
-        //    await adapter.ContinueConversationAsync(appId, reference, new BotCallbackHandler(async delegate(ITurnContext context, CancellationToken token) { await context.SendActivityAsync("Some action"); }), CancellationToken.None);
-        //}
     }
 }
