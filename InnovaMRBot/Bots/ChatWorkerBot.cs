@@ -75,7 +75,7 @@ namespace InnovaMRBot.Bots
                     settings: new JsonSerializerSettings() { TypeNameHandling = TypeNameHandling.All, });
 
                 var repl = turnContext.Activity.CreateReply();
-
+                
                 repl.TextFormat = "plain";
                 repl.Text = setting;
 

@@ -11,5 +11,11 @@ namespace InnovaMRBot.Models
         public string ReactionType { get; set; }
 
         public int ReactionInMinutes { get; set; }
+
+        public MessageReaction SetReactionInMinutes(DateTimeOffset publishDate)
+        {
+            ReactionInMinutes = ReactionTime.Subtract(publishDate).Minutes;
+            return this;
+        }
     }
 }

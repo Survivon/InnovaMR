@@ -78,7 +78,7 @@ namespace InnovaMRBot.Services
 
             var resultTable = new StringBuilder();
 
-            resultTable.Append("<table>style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR url</th><th>Tickets url</th><th>MR Reaction</th><th>Avg reaction</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR url</th><th>Tickets url</th><th>MR Reaction</th><th>Avg reaction</th></tr>");
 
             foreach (var groupedMerge in groupedMerges)
             {
@@ -127,7 +127,7 @@ namespace InnovaMRBot.Services
 
             var resultTable = new StringBuilder();
 
-            resultTable.Append("<table>style=\"width: 100 % \"><tr><th>Dev</th><th>Avg reaction time</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>Dev</th><th>Avg reaction time</th></tr>");
 
             foreach (var groupedMerge in groupedMerges)
             {
@@ -166,9 +166,9 @@ namespace InnovaMRBot.Services
 
             var resultTable = new StringBuilder();
 
-            resultTable.Append("<table>style=\"width: 100 % \"><tr><th>Date</th><th>Count unmarked mr</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>Date</th><th>Count unmarked mr</th></tr>");
 
-            foreach (var groupedMerge in groupedMerges)
+            foreach (var groupedMerge in groupedMerges.OrderBy(c => c.Key))
             {
                 resultTable.Append($"<tr><td>{groupedMerge.Key:MM/dd/yyyy}</td><td>{groupedMerge.Count(c => GetLastVersion(c).Reactions.Count < 2)}</td></tr>");
             }
@@ -239,14 +239,18 @@ namespace InnovaMRBot.Services
         private static string GetFileName(string content, string fileName)
         {
             var result = string.Empty;
-            var fullFileName = $"{fileName}{DateTime.Now:s}.html";
+            var fullFileName = $"{fileName}{DateTime.Now.Millisecond}.html";
 
             var path = Path.Combine(
-                Directory.GetCurrentDirectory(), "wwwroot",
+                Directory.GetCurrentDirectory(),
+                //"wwwroot",
                 fullFileName);
 
-            var file = File.Create(fullFileName);
-            file.Dispose();
+            if (!File.Exists(path))
+            {
+                var file = File.Create(path);
+                file.Dispose();
+            }
 
             File.WriteAllText(path, content);
 
