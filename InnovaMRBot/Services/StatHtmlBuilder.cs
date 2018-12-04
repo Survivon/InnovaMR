@@ -5,13 +5,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using InnovaMRBot.Helpers;
 
 namespace InnovaMRBot.Services
 {
     public class StatHtmlBuilder : IStatBuilder
     {
         private const string HEADER_HTML_PATTERN =
-            "<!DOCTYPE html><html><head><meta charset=\"utf-8\" /><title>Statistics</title><style>table, th, td { border: 1px solid black;border-collapse: collapse; } th, td { padding: 5px;text-align: left; } </style></head><body>{0}</body></html>";
+            "<!DOCTYPE html><html><head><meta charset=\"utf-8\" /><title>Statistics</title><style>table, th, td { border: 1px solid black;border-collapse: collapse; } th, td { padding: 5px;text-align: left; } tr:nth-child(even) {background: #d1e2ff} tr:nth-child(odd) { background: #ffebd1} </style></head><body>{0}</body></html>";
 
         // ex: getalldata 24/11/2018 28/11/2018
         public static ResponseMessage GetAllData(List<MergeSetting> merge, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
@@ -32,7 +33,7 @@ namespace InnovaMRBot.Services
 
             var resultTable = new StringBuilder();
 
-            resultTable.Append("<table style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR url</th><th>Tickets url</th><th>Description</th><th>Publish date</th><th>Count of change</th><th>Reviewers</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR Link</th><th>Tickets Links</th><th>Description</th><th>Publish Date</th><th>Count of Change</th><th>Reviewers</th></tr>");
 
             foreach (var groupedMerge in groupedMerges)
             {
@@ -78,7 +79,7 @@ namespace InnovaMRBot.Services
 
             var resultTable = new StringBuilder();
 
-            resultTable.Append("<table style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR url</th><th>Tickets url</th><th>MR Reaction</th><th>Avg reaction</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR Link</th><th>Tickets Links</th><th>MR Reaction</th><th>Avg Reaction</th></tr>");
 
             foreach (var groupedMerge in groupedMerges)
             {
@@ -87,12 +88,12 @@ namespace InnovaMRBot.Services
 
                 var lastVersion = GetLastVersion(first);
 
-                resultTable.Append($"<tr><td rowspan=\"{groupedMerge.ToList().Count}\">{groupedMerge.Key}</td><td>{first.MrUrl}</td><td>{string.Join("<br>", first.TicketsUrl)}</td><td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes}"))}</td><td>{lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersion.Reactions.Count}</td></tr>");
+                resultTable.Append($"<tr><td rowspan=\"{groupedMerge.ToList().Count}\">{groupedMerge.Key}</td><td>{first.MrUrl}</td><td>{string.Join("<br>", first.TicketsUrl)}</td><td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td><td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersion.Reactions.Count).MinutesToCorrectTimeConverter()}</td></tr>");
                 foreach (var mergeSetting in groupedMerge.Skip(1))
                 {
                     lastVersion = GetLastVersion(mergeSetting);
                     resultTable.Append(
-                        $"<tr><td>{mergeSetting.MrUrl}</td><td>{string.Join("<br>", mergeSetting.TicketsUrl)}</td><td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes}"))}</td><td>{lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersion.Reactions.Count}</td></tr>");
+                        $"<tr><td>{mergeSetting.MrUrl}</td><td>{string.Join("<br>", mergeSetting.TicketsUrl)}</td><td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td><td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersion.Reactions.Count).MinutesToCorrectTimeConverter()}</td></tr>");
                 }
             }
 
@@ -127,12 +128,12 @@ namespace InnovaMRBot.Services
 
             var resultTable = new StringBuilder();
 
-            resultTable.Append("<table style=\"width: 100 % \"><tr><th>Dev</th><th>Avg reaction time</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>Dev</th><th>Avg Response Time</th></tr>");
 
             foreach (var groupedMerge in groupedMerges)
             {
                 resultTable.Append(
-                    $"<tr><td>{groupedMerge.Key}</td><td>{GetAvgReactionToOtherMerge(merges, groupedMerge.Key)}</td></tr>");
+                    $"<tr><td>{groupedMerge.Key}</td><td>{GetAvgReactionToOtherMerge(merges, groupedMerge.Key).MinutesToCorrectTimeConverter()}</td></tr>");
             }
 
             resultTable.Append("</table>");
@@ -166,7 +167,7 @@ namespace InnovaMRBot.Services
 
             var resultTable = new StringBuilder();
 
-            resultTable.Append("<table style=\"width: 100 % \"><tr><th>Date</th><th>Count unmarked mr</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>Date</th><th>Count MR Without Review</th></tr>");
 
             foreach (var groupedMerge in groupedMerges.OrderBy(c => c.Key))
             {

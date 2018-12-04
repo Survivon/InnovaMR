@@ -592,13 +592,13 @@ Nothing is saved in the database until the user clicks on Save.
             Assert.True(true);
         }
 
-        private DateTime GetRandomDateTime()
+        private DateTimeOffset GetRandomDateTime()
         {
             var random = new Random();
 
-            var addMinutes = random.Next(1, 20);
+            var addMinutes = random.Next(60, 180);
 
-            return DateTime.UtcNow.AddMinutes(addMinutes);
+            return DateTimeOffset.UtcNow.AddMinutes(addMinutes);
         }
 
         private MessageReaction GetReaction(string name)
