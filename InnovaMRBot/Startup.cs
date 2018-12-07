@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
 using InnovaMRBot.Helpers;
+using InnovaMRBot.Services.Hosted;
 
 namespace InnovaMRBot
 {
@@ -74,6 +75,8 @@ namespace InnovaMRBot
 
                 options.State.Add(conversationState);
             });
+
+            services.AddHostedService<BackgroundService>();
 
             services.AddSingleton<ChatStateService>(sp =>
             {
