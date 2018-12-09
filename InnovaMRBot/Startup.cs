@@ -15,6 +15,7 @@ using System;
 using System.Linq;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Services.Hosted;
+using TelegramBotApi.Telegram;
 
 namespace InnovaMRBot
 {
@@ -78,6 +79,8 @@ namespace InnovaMRBot
 
             services.AddHostedService<BackgroundService>();
 
+            services.AddSingleton<Telegram>(sp => new Telegram());
+
             services.AddSingleton<ChatStateService>(sp =>
             {
                 var options = sp.GetRequiredService<IOptions<BotFrameworkOptions>>().Value;
@@ -92,10 +95,13 @@ namespace InnovaMRBot
                     throw new InvalidOperationException("ConversationState must be defined and added before adding conversation-scoped state accessors.");
                 }
 
-                var accessors = new ChatStateService(conversationState);
+                var telegram = sp.GetService<Telegram>();
+
+                var accessors = new ChatStateService(conversationState, telegram);
 
                 return accessors;
             });
+
 
             services.AddMvc();
         }

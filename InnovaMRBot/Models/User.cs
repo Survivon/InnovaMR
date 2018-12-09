@@ -10,5 +10,7 @@ namespace InnovaMRBot.Models
         public bool IsAdmin { get; set; }
 
         public string SkypeLogin { get; set; }
+
+        public string ChatId { get; set; }
     }
 }

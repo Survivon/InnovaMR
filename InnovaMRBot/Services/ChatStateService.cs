@@ -13,7 +13,13 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Connector;
 using Microsoft.Bot.Schema;
 using Newtonsoft.Json;
+using TelegramBotApi.Models;
+using TelegramBotApi.Models.Keyboard;
+using TelegramBotApi.Telegram;
+using TelegramBotApi.Telegram.Events;
+using TelegramBotApi.Telegram.Request;
 using Conversations = InnovaMRBot.Models.Conversations;
+using User = InnovaMRBot.Models.User;
 
 namespace InnovaMRBot.Services
 {
@@ -61,12 +67,261 @@ namespace InnovaMRBot.Services
 
         #endregion
 
-        public CustomConversationState ConversationState { get; }
+        private readonly Telegram _telegramService;
 
-        public ChatStateService(CustomConversationState conversationState)
+        public CustomConversationState ConversationState { get; }
+        
+        public ChatStateService(CustomConversationState conversationState, Telegram telegram)
         {
             ConversationState = conversationState ?? throw new ArgumentNullException(nameof(conversationState));
+            _telegramService = telegram;
+            _telegramService.OnUpdateResieve += TelegramServiceOnOnUpdateResieve;
         }
+
+        private void TelegramServiceOnOnUpdateResieve(object sender, UpdateEventArgs e)
+        {
+            
+        }
+
+        #region Telegram part
+
+        private async Task<SendMessageRequest> SetupMRConversationAsync(Update message)
+        {
+            var conversationId = message.Message.Chat.Id.ToString();
+
+            var resultMessage = new SendMessageRequest()
+            {
+                ChatId = conversationId,
+            };
+
+            var conversations = await GetCurrentConversationsAsync();
+
+            if (!conversations.BotConversation.Any())
+            {
+                var syncId = Guid.NewGuid();
+                var chatSetting = new ChatSetting()
+                {
+                    Id = conversationId,
+                    IsMRChat = true,
+                    SyncId = syncId,
+                    Name = message.Message.Chat.FirstName + message.Message.Chat.LastName,
+                };
+
+                var newConversation = new ConversationSetting()
+                {
+                    MRChat = chatSetting,
+                };
+
+                await SaveConversationAsync(newConversation);
+
+                resultMessage.Text = $"Current chat is setup as MR with sync id: {syncId}";
+            }
+            
+            return resultMessage;
+        }
+
+        private async Task<SendMessageRequest> RemoveMrConversationAsync(Update message)
+        {
+            var convesationId = message.Message.Chat.Id.ToString();
+            var userId = message.Message.ForwardSender.Id.ToString();
+            var responseMessage = new SendMessageRequest()
+            {
+                ChatId = convesationId,
+            };
+
+            var users = await GetUsersAsync();
+            var needUser = users.Users.FirstOrDefault(u => u.UserId.Equals(userId));
+            if (needUser == null)
+            {
+                var savedUser = new User()
+                {
+                    Name = GetUserFullName(message.Message.ForwardSender),
+                    UserId = message.Message.ForwardSender.Id.ToString(),
+                };
+
+                await AddOrUpdateUserAsync(savedUser);
+            }
+
+            var conversations = await GetCurrentConversationsAsync();
+
+            var needConversation = conversations.BotConversation.FirstOrDefault(c => c.MRChat.Id.Equals(convesationId));
+            if (needConversation == null)
+            {
+                responseMessage.Text =
+                    "This is not a MR's conversation or you don't add any conversation. Try in MR's conversation ;)";
+            }
+            else
+            {
+                if (needConversation.Admins.Any(u => u.UserId.Equals(userId)))
+                {
+                    responseMessage.Text = "Congratulation, you remove all data with linked for current conversation";
+                    // TODO: add get stat and send before remove
+                    await RemoveConversationAsync(needConversation);
+                }
+                else
+                {
+                    responseMessage.Text = "You don't have permission for remove this conversation!";
+                }
+            }
+
+            return responseMessage;
+        }
+
+        private async Task<List<SendMessageRequest>> GetMRMessageAsync(Update message)
+        {
+            var convesationId = message.Message.Chat.Id.ToString();
+            var userId = message.Message.ForwardSender.Id.ToString();
+
+            var responseMessageChain = new List<SendMessageRequest>();
+
+            var responseMessage = new SendMessageRequest()
+            {
+                ChatId = convesationId,
+            };
+
+            var responseMessageForUser = new SendMessageRequest()
+            {
+                ChatId = convesationId,
+            };
+
+            var messageText = message.Message.Text;
+
+            var mrRegex = new Regex(MR_PATTERN);
+            var mrUrlMatch = mrRegex.Match(messageText);
+            var mrUrl = mrUrlMatch.Value;
+
+            var conversations = await GetCurrentConversationsAsync();
+
+            var conversation =
+                conversations.BotConversation.FirstOrDefault(c => c.Partisipants.Any(p => p.UserId == userId));
+
+            if (await IsMrContainceAsync(mrUrl, conversation.MRChat.Id))
+            {
+                // for updatedTicket
+                var needMr = conversation.ListOfMerge.FirstOrDefault(m => m.MrUrl.Equals(mrUrl));
+                if (needMr == null)
+                {
+                    responseMessageForUser.Text = "I can not to find any MR for update";
+                    return new List<SendMessageRequest>(){ responseMessageForUser };
+                }
+
+                needMr.IsHadAlreadyChange = true;
+                needMr.CountOfChange++;
+
+                needMr.VersionedSetting.Add(new VersionedMergeRequest()
+                {
+                    OwnerMergeId = needMr.Id,
+                    PublishDate = new DateTimeOffset(UnixTimeStampToDateTime((double)message.Message.ForwardDate)),
+                    Id = message.Message.Id.ToString(),
+                });
+
+                await SaveConversationAsync(conversation);
+
+                responseMessage.ChatId = conversation.MRChat.Id;
+                responseMessage.Text = messageText;
+                AddButtonForRequest(responseMessage, message.Message.Id.ToString(), mrUrl);
+
+                responseMessageChain.Add(responseMessage);
+
+                responseMessageForUser.Text = "Well done! I'll send it :)";
+
+                responseMessageChain.Add(responseMessageForUser);
+            }
+            else
+            {
+                var users = await GetUsersAsync();
+                var needUser = users.Users?.FirstOrDefault(u => u.UserId.Equals(userId));
+                if (needUser == null)
+                {
+                    var savedUser = new User()
+                    {
+                        Name = GetUserFullName(message.Message.ForwardSender),
+                        UserId = userId,
+                    };
+
+                    await AddOrUpdateUserAsync(savedUser);
+
+                    needUser = savedUser;
+                }
+
+                var mrMessage = new MergeSetting { MrUrl = mrUrl };
+
+                var ticketRegex = new Regex(TICKET_PATTERN);
+
+                var ticketMatches = ticketRegex.Matches(messageText);
+
+                var description = messageText.Replace(mrUrl, string.Empty);
+
+                foreach (Match ticketMatch in ticketMatches)
+                {
+                    mrMessage.TicketsUrl.Add(ticketMatch.Value);
+                    description = description.Replace(ticketMatch.Value, string.Empty);
+                }
+
+                mrMessage.PublishDate = new DateTimeOffset(UnixTimeStampToDateTime((double)message.Message.ForwardDate));
+                mrMessage.Id = message.Message.Id.ToString();
+
+                var lineOfMessage = description.Split('\r').ToList();
+                var firstLine = lineOfMessage.FirstOrDefault();
+
+                if (_changesNotation.Any(c => c.Equals(firstLine, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    lineOfMessage.RemoveAt(0);
+                    description = string.Join('\r', lineOfMessage);
+                }
+
+                mrMessage.Description = description.Trim(new char[] { '\r', '\n' });
+                mrMessage.Owner = needUser;
+
+                conversation.ListOfMerge.Add(mrMessage);
+
+                await SaveConversationAsync(conversation);
+
+                responseMessage.ChatId = conversation.MRChat.Id;
+                responseMessage.Text = messageText;
+            }
+
+            return responseMessage;
+        }
+
+        private async Task<SendMessageRequest> SetupUsersForConversationAsync(Update message)
+        {
+            var convesationId = message.Message.Chat.Id.ToString();
+            var userId = message.Message.ForwardSender.Id.ToString();
+            var responseMessage = new SendMessageRequest()
+            {
+                ChatId = convesationId,
+            };
+
+            var conversation = await GetConversationByIdAsync(convesationId);
+
+            if (conversation != null)
+            {
+                if (!conversation.Partisipants.Any(p => p.UserId.Equals(userId)))
+                {
+                    var newUser = new User()
+                    {
+                        Name = GetUserFullName(message.Message.ForwardSender),
+                        UserId = userId,
+                    };
+
+                    conversation.Partisipants.Add(newUser);
+
+                    await SaveConversationAsync(conversation);
+                    await AddOrUpdateUserAsync(newUser);
+                }
+            }
+            else
+            {
+                responseMessage.Text = "This conversation is not MR chat!";
+            }
+
+            return responseMessage;
+        }
+
+        #endregion
+
+        #region Skype part
 
         public async Task<Activity> ReturnMessage(ITurnContext turnContext)
         {
@@ -113,10 +368,6 @@ namespace InnovaMRBot.Services
                 else if (message.Equals(GET_MY_UNMARKED_MR))
                 {
                     return await GetMyUnMarkedMergeRequestAsync(turnContext);
-                }
-                else if (message.Equals(START_READ_ALL_MESSAGE))
-                {
-                    return await GetAllMessageAsync(turnContext);
                 }
                 else
                 {
@@ -205,41 +456,7 @@ namespace InnovaMRBot.Services
 
             return responseMessage;
         }
-
-        private async Task<Activity> GetAllMessageAsync(ITurnContext context)
-        {
-            var activiti = context.Activity.CreateReply();
-            activiti.TextFormat = "plain";
-            var connector = new ConnectorClient(new Uri(context.Activity.ServiceUrl));
-
-            string token = null;
-            var res = new List<ConversationMembers>();
-
-            do
-            {
-                var conv = connector.Conversations as Microsoft.Bot.Connector.Conversations;
-                var results = await conv.GetConversationsWithHttpMessagesAsync(token);
-                token = results.Body.ContinuationToken;
-
-                res.AddRange(results.Body.Conversations);
-                //foreach (var conversationMemberse in results.Body.Conversations)
-                //{
-                //    foreach (var conversationMemberseMember in conversationMemberse.Members)
-                //    {
-                        
-                //    }
-                //}
-
-            } while (!string.IsNullOrEmpty(token));
-
-            var str = JsonConvert.SerializeObject(res, Formatting.Indented,
-                new JsonSerializerSettings() {TypeNameHandling = TypeNameHandling.All});
-
-            activiti.Text = str;
-            
-            return activiti;
-        }
-
+        
         private async Task<Activity> RemoveMrConversationAsync(ITurnContext context)
         {
             var convesationId = context.Activity.Conversation.Id;
@@ -661,9 +878,12 @@ Thanks :)
 
         #endregion
 
+        #endregion
+
         #region Helpers
 
         private async Task<Activity> GetMessageWithCheckChatAsync(Func<ConversationSetting, Task<string>> successAction, ITurnContext context)
+#pragma warning restore SA1124 // Do not use regions
         {
             var conversationId = context.Activity.Conversation.Id;
 
@@ -838,6 +1058,42 @@ Thanks :)
                 }, CancellationToken.None);
 
             return userSetting;
+        }
+
+        private static DateTime UnixTimeStampToDateTime(double unixTimeStamp)
+        {
+            // Unix timestamp is seconds past epoch
+            System.DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
+            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
+            return dtDateTime;
+        }
+
+        private string GetUserFullName(TelegramBotApi.Models.User user)
+        {
+            return $"{user.FirstName} {user.LastName}";
+        }
+
+        private void AddButtonForRequest(SendMessageRequest message, string mrId, string mrUrl)
+        {
+            message.ReplyMarkup = new InlineKeyboardMarkup()
+            {
+                InlineKeyboardButtons = new List<List<InlineKeyboardButton>>()
+                {
+                    new List<InlineKeyboardButton>()
+                    {
+                        new InlineKeyboardButton()
+                        {
+                            Text = "👍",
+                            CallbackData = $"/success reaction {mrId}",
+                        },
+                        new InlineKeyboardButton()
+                        {
+                            Text = "MR link",
+                            Url = mrUrl,
+                        },
+                    },
+                },
+            };
         }
 
         #endregion

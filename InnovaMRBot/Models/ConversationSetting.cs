@@ -10,6 +10,7 @@ namespace InnovaMRBot.Models
             ListOfMerge = new List<MergeSetting>();
             Id = Guid.NewGuid();
             Admins = new List<User>();
+            Partisipants = new List<User>();
         }
 
         public Guid Id { get; set; }
@@ -21,5 +22,7 @@ namespace InnovaMRBot.Models
         public List<User> Admins { get; set; }
 
         public List<MergeSetting> ListOfMerge { get; set; }
+
+        public List<User> Partisipants { get; set; }
     }
 }

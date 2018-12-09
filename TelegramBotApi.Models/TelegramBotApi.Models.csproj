@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{804B1BF1-5146-41D7-AEB6-629DD5C2D2C3}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TelegramBotApi.Models</RootNamespace>
+    <AssemblyName>TelegramBotApi.Models</AssemblyName>
+    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Attachment\Audio.cs" />
+    <Compile Include="Attachment\BaseAttachment.cs" />
+    <Compile Include="Attachment\BaseRecorder.cs" />
+    <Compile Include="Attachment\Contact.cs" />
+    <Compile Include="Attachment\Document.cs" />
+    <Compile Include="Attachment\File.cs" />
+    <Compile Include="Attachment\Location.cs" />
+    <Compile Include="Attachment\PhotoSize.cs" />
+    <Compile Include="Attachment\Sticker.cs" />
+    <Compile Include="Attachment\Venue.cs" />
+    <Compile Include="Attachment\Video.cs" />
+    <Compile Include="Attachment\Voice.cs" />
+    <Compile Include="CallbackQuery.cs" />
+    <Compile Include="Chat.cs" />
+    <Compile Include="ChosenInlineResult.cs" />
+    <Compile Include="Enum\BotActionType.cs" />
+    <Compile Include="Enum\ChatType.cs" />
+    <Compile Include="Enum\DocumentMimeType.cs" />
+    <Compile Include="Enum\FormattingMessage.cs" />
+    <Compile Include="Enum\VideoMimeType.cs" />
+    <Compile Include="ForceReply.cs" />
+    <Compile Include="Game\CallbackGame.cs" />
+    <Compile Include="InlineQuery.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryBase.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResult.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultArticle.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultCachedAudio.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultContact.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultDocument.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultGif.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultLocation.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultMpeg4Gif.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultPhoto.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultVenue.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultVideo.cs" />
+    <Compile Include="InlineQueryResults\InlineQueryResultVoice.cs" />
+    <Compile Include="InputMessageContent\InputContactMessageContent.cs" />
+    <Compile Include="InputMessageContent\InputLocationMessageContent.cs" />
+    <Compile Include="InputMessageContent\InputMessageContent.cs" />
+    <Compile Include="InputMessageContent\InputTextMessageContent.cs" />
+    <Compile Include="InputMessageContent\InputVenueMessageContent.cs" />
+    <Compile Include="Keyboard\InlineKeyboardButton.cs" />
+    <Compile Include="Keyboard\InlineKeyboardMarkup.cs" />
+    <Compile Include="Keyboard\Interface\IKeyboard.cs" />
+    <Compile Include="Keyboard\KeyboardButton.cs" />
+    <Compile Include="Keyboard\ReplyKeyboardHide.cs" />
+    <Compile Include="Keyboard\ReplyKeyboardMarkup.cs" />
+    <Compile Include="Message.cs" />
+    <Compile Include="MessageEntity.cs" />
+    <Compile Include="ResponseAnswer.cs" />
+    <Compile Include="ResponseParameters.cs" />
+    <Compile Include="Update.cs" />
+    <Compile Include="User.cs" />
+    <Compile Include="UserProfilePhotos.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
