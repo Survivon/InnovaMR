@@ -1,4 +1,7 @@
 ﻿
+using System.Collections.Generic;
+using TelegramBotApi.Models;
+
 namespace TelegramBotApi.Telegram
 {
     using System;
@@ -38,7 +41,14 @@ namespace TelegramBotApi.Telegram
             }
         }
 
-        public event EventHandler<UpdateEventArgs> OnUpdateResieve;
+        public void SetupChanges(List<Update> updates)
+        {
+            if(!updates.Any()) return;
+
+            this.OnUpdateReceive?.Invoke(this, new UpdateEventArgs(){ Updates = updates });
+        }
+
+        public event EventHandler<UpdateEventArgs> OnUpdateReceive;
 
         public void StartLongPull()
         {
@@ -49,7 +59,7 @@ namespace TelegramBotApi.Telegram
                     var updates = await this.GetUpdatesAsync();
                     if (updates != null && updates.Any())
                     {
-                        this.OnUpdateResieve?.Invoke(this, new UpdateEventArgs() {Updates = updates});
+                        this.OnUpdateReceive?.Invoke(this, new UpdateEventArgs() {Updates = updates});
                     }
 
                     await Task.Delay(TimeSpan.FromMilliseconds(2000));

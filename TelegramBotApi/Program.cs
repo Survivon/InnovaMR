@@ -18,7 +18,7 @@ namespace TelegramBotApi
 
             var telegram = new Telegram.Telegram();
 
-            telegram.OnUpdateResieve +=TelegramOnUpdateResieve;
+            telegram.OnUpdateReceive +=TelegramOnUpdateReceive;
 
             Task.Run(async () =>
                      {
@@ -36,7 +36,7 @@ namespace TelegramBotApi
             Console.ReadKey();
         }
 
-        private static void TelegramOnUpdateResieve(object sender, UpdateEventArgs updateEventArgs)
+        private static void TelegramOnUpdateReceive(object sender, UpdateEventArgs updateEventArgs)
         {
             Console.WriteLine(updateEventArgs.Updates.FirstOrDefault().Message.Text);
             Console.WriteLine(updateEventArgs.Updates.FirstOrDefault().Id);

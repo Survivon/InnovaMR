@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace InnovaMRBot.Controllers
 {
     [Route("api/[controller]")]
-    public class DownlodController : Controller
+    public class DownloadController : Controller
     {
         [HttpGet("{id}")]
         public async Task<IActionResult> Download(string fileName)

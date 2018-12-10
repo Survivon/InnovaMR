@@ -15,6 +15,7 @@ using System;
 using System.Linq;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Services.Hosted;
+using TelegramBotApi.Extension;
 using TelegramBotApi.Telegram;
 
 namespace InnovaMRBot
@@ -47,7 +48,7 @@ namespace InnovaMRBot
 
                 var environment = _isProduction ? "production" : "development";
 
-                var botConfig = BotConfiguration.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
+                var botConfig = MrConfigurationManager.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
                 services.AddSingleton(sp => botConfig ?? throw new InvalidOperationException($"The .bot config file could not be loaded. ({botConfig})"));
 
                 var service = botConfig.Services.Where(s => s.Type == "endpoint" && s.Name == environment).FirstOrDefault();
@@ -63,11 +64,11 @@ namespace InnovaMRBot
                 options.OnTurnError = async (context, exception) =>
                 {
                     logger.LogError($"Exception caught : {exception}");
-                    #if DEBUG
-                        await context.SendActivityAsync($"{exception.Message} \n \n {exception.StackTrace}");
-                    #else
+#if DEBUG
+                    await context.SendActivityAsync($"{exception.Message} \n \n {exception.StackTrace}");
+#else
                         await context.SendActivityAsync($"Something went wrong :(");
-                    #endif
+#endif
                 };
 
                 IStorage dataStore = new MemoryStorage();
@@ -77,11 +78,26 @@ namespace InnovaMRBot
                 options.State.Add(conversationState);
             });
 
-            services.AddHostedService<BackgroundService>();
+            services.AddSingleton(sp =>
+            {
+                var telegram = new Telegram();
 
-            services.AddSingleton<Telegram>(sp => new Telegram());
+                var secretKey = Configuration.GetSection("botFileSecret")?.Value;
+                var botFilePath = Configuration.GetSection("botFilePath")?.Value;
 
-            services.AddSingleton<ChatStateService>(sp =>
+                var environment = _isProduction ? "production" : "development";
+
+                var botConfig = MrConfigurationManager.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
+
+                if (botConfig.TelegramSetting == null || string.IsNullOrEmpty(botConfig.TelegramSetting.WebhookUrl) ||
+                    string.IsNullOrEmpty(botConfig.TelegramSetting.BotKey)) return telegram;
+
+                telegram.SetWebhookAsync($"{botConfig.TelegramSetting.WebhookUrl}/{botConfig.TelegramSetting.BotKey}").ConfigureAwait(false);
+
+                return telegram;
+            });
+
+            services.AddSingleton(sp =>
             {
                 var options = sp.GetRequiredService<IOptions<BotFrameworkOptions>>().Value;
                 if (options == null)
@@ -102,6 +118,7 @@ namespace InnovaMRBot
                 return accessors;
             });
 
+            services.AddHostedService<BackgroundService>();
 
             services.AddMvc();
         }
@@ -117,6 +134,18 @@ namespace InnovaMRBot
                     routes.MapRoute(
                         name: "default",
                         template: "{controller=Home}/{action=Index}/{id?}");
+
+                    var secretKey = Configuration.GetSection("botFileSecret")?.Value;
+                    var botFilePath = Configuration.GetSection("botFilePath")?.Value;
+
+                    var environment = _isProduction ? "production" : "development";
+
+                    var botConfig = MrConfigurationManager.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
+
+                    routes.MapRoute(
+                        name: "telegramRout",
+                        template: $"{botConfig?.TelegramSetting?.BotKey ?? string.Empty}",
+                        defaults: new { controller = "Telegram", action = "GetUpdateFromTelegram" });
                 });
         }
     }

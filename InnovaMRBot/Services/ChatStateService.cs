@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using InnovaMRBot.Controllers;
+using InnovaMRBot.Helpers;
+using InnovaMRBot.Models;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Schema;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using InnovaMRBot.Controllers;
-using InnovaMRBot.Helpers;
-using InnovaMRBot.Models;
-using Microsoft.Bot.Builder;
-using Microsoft.Bot.Connector;
-using Microsoft.Bot.Schema;
-using Newtonsoft.Json;
+using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Keyboard;
 using TelegramBotApi.Telegram;
@@ -75,12 +74,38 @@ namespace InnovaMRBot.Services
         {
             ConversationState = conversationState ?? throw new ArgumentNullException(nameof(conversationState));
             _telegramService = telegram;
-            _telegramService.OnUpdateResieve += TelegramServiceOnOnUpdateResieve;
+            _telegramService.OnUpdateReceive += TelegramServiceOnUpdateReceive;
         }
 
-        private void TelegramServiceOnOnUpdateResieve(object sender, UpdateEventArgs e)
+        private void TelegramServiceOnUpdateReceive(object sender, UpdateEventArgs e)
         {
-            
+            var result = new List<SendMessageRequest>();
+
+            foreach (var update in e.Updates)
+            {
+                if (update.Message != null)
+                {
+
+                }
+                else if(update.CallbackQuery != null)
+                {
+                    
+                }
+                else if(update.InlineQuery != null)
+                {
+                    
+                }
+                else if (update.InlineResult != null)
+                {
+
+                }
+
+                _telegramService.SendMessageAsync(new SendMessageRequest()
+                {
+                    ChatId = update.Message.Chat.Id.ToString(),
+                    Text = JsonConvert.SerializeObject(update),
+                }).ConfigureAwait(false);
+            }
         }
 
         #region Telegram part
@@ -195,6 +220,12 @@ namespace InnovaMRBot.Services
             var conversation =
                 conversations.BotConversation.FirstOrDefault(c => c.Partisipants.Any(p => p.UserId == userId));
 
+            if (string.IsNullOrEmpty(mrUrl))
+            {
+                responseMessageForUser.Text = "Please add MR link to message, thanks :)";
+                return new List<SendMessageRequest>() { responseMessageForUser };
+            }
+
             if (await IsMrContainceAsync(mrUrl, conversation.MRChat.Id))
             {
                 // for updatedTicket
@@ -202,7 +233,7 @@ namespace InnovaMRBot.Services
                 if (needMr == null)
                 {
                     responseMessageForUser.Text = "I can not to find any MR for update";
-                    return new List<SendMessageRequest>(){ responseMessageForUser };
+                    return new List<SendMessageRequest> { responseMessageForUser };
                 }
 
                 needMr.IsHadAlreadyChange = true;
@@ -250,6 +281,12 @@ namespace InnovaMRBot.Services
 
                 var ticketMatches = ticketRegex.Matches(messageText);
 
+                if (ticketMatches.Count <= 0)
+                {
+                    responseMessageForUser.Text = "Please add ticket link to message, thanks :)";
+                    return new List<SendMessageRequest>() { responseMessageForUser };
+                }
+
                 var description = messageText.Replace(mrUrl, string.Empty);
 
                 foreach (Match ticketMatch in ticketMatches)
@@ -270,6 +307,12 @@ namespace InnovaMRBot.Services
                     description = string.Join('\r', lineOfMessage);
                 }
 
+                if (string.IsNullOrEmpty(description))
+                {
+                    responseMessageForUser.Text = "Please add description for your MR to message, thanks :)";
+                    return new List<SendMessageRequest>() { responseMessageForUser };
+                }
+
                 mrMessage.Description = description.Trim(new char[] { '\r', '\n' });
                 mrMessage.Owner = needUser;
 
@@ -279,9 +322,15 @@ namespace InnovaMRBot.Services
 
                 responseMessage.ChatId = conversation.MRChat.Id;
                 responseMessage.Text = messageText;
+
+                responseMessageChain.Add(responseMessage);
+
+                responseMessageForUser.Text = "Well done! I'll send it :)";
+
+                responseMessageChain.Add(responseMessageForUser);
             }
 
-            return responseMessage;
+            return responseMessageChain;
         }
 
         private async Task<SendMessageRequest> SetupUsersForConversationAsync(Update message)
@@ -869,7 +918,7 @@ Thanks :)
                 {
                     Name = "Stat",
                     ContentUrl = responseMessage.Text,
-                    ContentType = DownlodController.GetContentType(responseMessage.Text),
+                    ContentType = DownloadController.GetContentType(responseMessage.Text),
                 },
             };
 

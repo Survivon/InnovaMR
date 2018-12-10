@@ -55,7 +55,7 @@ namespace InnovaMRBotTest
 
             var state = new CustomConversationState(storage);
 
-            var service = new ChatStateService(state);
+            //var service = new ChatStateService(state);
 
             ITurnContext context = new TurnContext(new TestAdapter(), new Activity()
             {
@@ -89,7 +89,7 @@ Nothing is saved in the database until the user clicks on Save.
                 }
             });
 
-            await service.ReturnMessage(context);
+            //await service.ReturnMessage(context);
 
             Assert.True(true);
         }

@@ -43,4 +43,10 @@
   </ItemGroup>
 
 
+  <ItemGroup>
+    <ProjectReference Include="..\TelegramBotApi.Models\TelegramBotApi.Models.csproj" />
+    <ProjectReference Include="..\TelegramBotApi\TelegramBotApi.csproj" />
+  </ItemGroup>
+
+
 </Project>
