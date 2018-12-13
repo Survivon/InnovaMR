@@ -13,7 +13,7 @@
   "telegramSetting":  {
     "telegramapikey": "744048631:AAE_4sUEI5WcDxAZ-HpHWCv-vmFbLI00FNQ",
     "telegramwebhook": "https://innovamrbot.azurewebsites.net"
-  },,
+  },
   "padlock": "",
   "version": "2.0"
 }

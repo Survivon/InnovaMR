@@ -100,11 +100,17 @@ namespace InnovaMRBot.Services
 
                 }
 
-                _telegramService.SendMessageAsync(new SendMessageRequest()
+                if(update.Message?.Chat == null) return;
+
+                var returnedMessage = new SendMessageRequest()
                 {
                     ChatId = update.Message.Chat.Id.ToString(),
                     Text = JsonConvert.SerializeObject(update),
-                }).ConfigureAwait(false);
+                };
+
+                AddButtonForRequest(returnedMessage, "111", "https://fortia.atlassian.net/browse/INOCB-1186");
+
+                _telegramService.SendMessageAsync(returnedMessage).ConfigureAwait(false);
             }
         }
 

@@ -110,6 +110,22 @@ namespace TelegramBotApi.Extension
             var response = await RequestSender.Execute(DataAccessMode.Server, request, url).ConfigureAwait(false);
         }
 
+        public static async Task<WebhookInfoEntity> GetWebhookInfoAsync(this Telegram telegram)
+        {
+            var url = telegram.GetFullPathUrl("getWebhookInfo");
+
+
+            var request = new ExternalRequest<ResponseAnswer<WebhookInfoEntity>, object>()
+            {
+                Method = POST_METHOD,
+                PostContentType = "application/json"
+            };
+
+            var result = await RequestSender.Execute(DataAccessMode.Server, request, url).ConfigureAwait(false);
+
+            return result.Result.Result;
+        }
+
         public static async Task<Message> SendPhotoAsync(this Telegram telegram, SendPhotoRequest sendRequest, string file = null)
         {
             var result = new Message();

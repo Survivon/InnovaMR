@@ -80,19 +80,29 @@ namespace InnovaMRBot
 
             services.AddSingleton(sp =>
             {
-                var telegram = new Telegram();
-
                 var secretKey = Configuration.GetSection("botFileSecret")?.Value;
                 var botFilePath = Configuration.GetSection("botFilePath")?.Value;
+
+                var logger = _loggerFactory.CreateLogger<Telegram>();
 
                 var environment = _isProduction ? "production" : "development";
 
                 var botConfig = MrConfigurationManager.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
-
+                
                 if (botConfig.TelegramSetting == null || string.IsNullOrEmpty(botConfig.TelegramSetting.WebhookUrl) ||
-                    string.IsNullOrEmpty(botConfig.TelegramSetting.BotKey)) return telegram;
+                    string.IsNullOrEmpty(botConfig.TelegramSetting.BotKey)) return new Telegram();
 
-                telegram.SetWebhookAsync($"{botConfig.TelegramSetting.WebhookUrl}/{botConfig.TelegramSetting.BotKey}").ConfigureAwait(false);
+                //var telegram = new Telegram($"{botConfig.TelegramSetting.WebhookUrl}/some", null);
+                var telegram = new Telegram($"local/some", null);
+
+                logger.LogInformation("Get webhook info");
+                var webhookInfo = telegram.GetWebhookInfoAsync().Result;
+                logger.LogInformation($"Webhook url {webhookInfo.Url}");
+                if (string.IsNullOrEmpty(webhookInfo.Url))
+                {
+                    logger.LogInformation($"Setup webhook {botConfig.TelegramSetting.WebhookUrl}/{botConfig.TelegramSetting.BotKey}");
+                    telegram.SetWebhookAsync($"{botConfig.TelegramSetting.WebhookUrl}/some").ConfigureAwait(false);
+                }
 
                 return telegram;
             });

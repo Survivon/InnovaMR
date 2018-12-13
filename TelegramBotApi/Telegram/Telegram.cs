@@ -19,7 +19,10 @@ namespace TelegramBotApi.Telegram
 
         public Telegram(bool isStartLongPool = true)
         {
-            this.StartLongPull();
+            if (isStartLongPool)
+            {
+                this.StartLongPull();
+            }
         }
 
         public Telegram(string botToken) : this()
@@ -43,9 +46,9 @@ namespace TelegramBotApi.Telegram
 
         public void SetupChanges(List<Update> updates)
         {
-            if(!updates.Any()) return;
+            if (updates == null || !updates.Any()) return;
 
-            this.OnUpdateReceive?.Invoke(this, new UpdateEventArgs(){ Updates = updates });
+            this.OnUpdateReceive?.Invoke(this, new UpdateEventArgs() { Updates = updates });
         }
 
         public event EventHandler<UpdateEventArgs> OnUpdateReceive;
@@ -59,7 +62,7 @@ namespace TelegramBotApi.Telegram
                     var updates = await this.GetUpdatesAsync();
                     if (updates != null && updates.Any())
                     {
-                        this.OnUpdateReceive?.Invoke(this, new UpdateEventArgs() {Updates = updates});
+                        this.OnUpdateReceive?.Invoke(this, new UpdateEventArgs() { Updates = updates });
                     }
 
                     await Task.Delay(TimeSpan.FromMilliseconds(2000));
