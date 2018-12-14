@@ -57,7 +57,7 @@ namespace TelegramBotApi.Extension
 
             var response = await RequestSender.Execute(DataAccessMode.Server, request, url).ConfigureAwait(false);
 
-            result = response.Result.Result;
+            result = response?.Result?.Result ?? null;
 
             return result;
         }

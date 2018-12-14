@@ -1,7 +1,9 @@
-﻿namespace TelegramBotApi.Telegram.DataAccess.Parsers
+﻿
+namespace TelegramBotApi.Telegram.DataAccess.Parsers
 {
-    using System;
     using Request;
+    using Newtonsoft.Json;
+    using System;
 
     internal static class JsonParser<T>
     {
@@ -41,7 +43,8 @@
             {
                 try
                 {
-                    result = Newtonsoft.Json.JsonConvert.SerializeObject(data);
+                    var settings = new JsonSerializerSettings() { ContractResolver = new NullToEmptyStringResolver() };
+                    result = JsonConvert.SerializeObject(data, settings);
                 }
                 catch (Exception) { /* ignore */ }
             }

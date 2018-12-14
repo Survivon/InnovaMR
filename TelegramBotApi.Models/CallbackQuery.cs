@@ -19,5 +19,11 @@
 
         [DataMember(Name = "data")]
         public string Data { get; set; }
+
+        [DataMember(Name = "chat_instance")]
+        public string ChatInstance { get; set; }
+
+        [DataMember(Name = "game_short_name")]
+        public string GameShortName { get; set; }
     }
 }

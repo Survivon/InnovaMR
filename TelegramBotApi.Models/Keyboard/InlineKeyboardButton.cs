@@ -6,6 +6,11 @@
     [DataContract]
     public class InlineKeyboardButton
     {
+        public InlineKeyboardButton()
+        {
+            Url = string.Empty;
+        }
+
         [DataMember(Name = "text")]
         public string Text { get; set; }
 

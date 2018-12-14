@@ -23,11 +23,26 @@ namespace TelegramBotApi.Models
         [DataMember(Name = "forward_from")]
         public User ForwardSender { get; set; }
 
+        [DataMember(Name = "forward_signature")]
+        public string ForwardSignature { get; set; }
+
+        [DataMember(Name = "forward_from_message_id")]
+        public int ForwardFromMessageId { get; set; }
+
         [DataMember(Name = "forward_date")]
         public long ForwardDate { get; set; }
 
         [DataMember(Name = "reply_to_message")]
         public Message ReplyMessage { get; set; }
+
+        [DataMember(Name = "edit_date")]
+        public int EditDate { get; set; }
+
+        [DataMember(Name = "media_group_id")]
+        public string MediaGroupId { get; set; }
+
+        [DataMember(Name = "author_signature")]
+        public string AuthorSignature { get; set; }
 
         [DataMember(Name = "text")]
         public string Text { get; set; }
@@ -35,8 +50,26 @@ namespace TelegramBotApi.Models
         [DataMember(Name = "entities")]
         public List<MessageEntity> Entities { get; set; }
 
+        [DataMember(Name = "caption_entities")]
+        public List<MessageEntity> CaptionEntities { get; set; }
+
         [DataMember(Name = "audio")]
         public Audio Audio { get; set; }
+
+        //VideoNote
+
+        //Game
+
+        //Invoice
+
+        //SuccessfulPayment
+
+        //connected_website
+
+        //passport_data
+
+        [DataMember(Name = "animation")]
+        public Animation Animation { get; set; }
 
         [DataMember(Name = "document")]
         public Document Document { get; set; }

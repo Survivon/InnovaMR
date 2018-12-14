@@ -53,6 +53,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Telegram\DataAccess\Parsers\JsonParser.cs" />
+    <Compile Include="Telegram\DataAccess\Parsers\NullToEmptyStringResolver.cs" />
     <Compile Include="Telegram\DataAccess\Request\DataAccessMode.cs" />
     <Compile Include="Telegram\DataAccess\Request\ErrorType.cs" />
     <Compile Include="Telegram\DataAccess\Request\ParametersCollection.cs" />

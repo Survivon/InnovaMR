@@ -41,6 +41,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attachment\Animation.cs" />
     <Compile Include="Attachment\Audio.cs" />
     <Compile Include="Attachment\BaseAttachment.cs" />
     <Compile Include="Attachment\BaseRecorder.cs" />
@@ -92,6 +93,10 @@
     <Compile Include="MessageEntity.cs" />
     <Compile Include="ResponseAnswer.cs" />
     <Compile Include="ResponseParameters.cs" />
+    <Compile Include="Shipping\OrderInfo.cs" />
+    <Compile Include="Shipping\PreCheckoutQuery.cs" />
+    <Compile Include="Shipping\ShippingAddress.cs" />
+    <Compile Include="Shipping\ShippingQuery.cs" />
     <Compile Include="Update.cs" />
     <Compile Include="User.cs" />
     <Compile Include="UserProfilePhotos.cs" />

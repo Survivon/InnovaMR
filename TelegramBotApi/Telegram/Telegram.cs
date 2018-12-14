@@ -1,14 +1,14 @@
 ﻿
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
+using TelegramBotApi.Telegram.Events;
 
 namespace TelegramBotApi.Telegram
 {
-    using System;
-    using System.Linq;
-    using System.Threading.Tasks;
-    using Events;
-    using Extension;
 
     public class Telegram
     {
@@ -17,12 +17,9 @@ namespace TelegramBotApi.Telegram
         private string _botTokenKey = "744048631:AAE_4sUEI5WcDxAZ-HpHWCv-vmFbLI00FNQ";
         private string _webhookUrl = "";
 
-        public Telegram(bool isStartLongPool = true)
+        public Telegram()
         {
-            if (isStartLongPool)
-            {
-                this.StartLongPull();
-            }
+
         }
 
         public Telegram(string botToken) : this()
@@ -30,9 +27,8 @@ namespace TelegramBotApi.Telegram
             this._botTokenKey = botToken;
         }
 
-        public Telegram(string webhookUrl, string botToken = null) : this(string.IsNullOrEmpty(webhookUrl))
+        public Telegram(string webhookUrl, string botToken = null)
         {
-            this._webhookUrl = webhookUrl;
             if (!string.IsNullOrEmpty(botToken))
             {
                 _botTokenKey = botToken;
@@ -40,7 +36,7 @@ namespace TelegramBotApi.Telegram
 
             if (!string.IsNullOrEmpty(webhookUrl))
             {
-                this.SetWebhookAsync(webhookUrl).ConfigureAwait(false);
+                _webhookUrl = webhookUrl;
             }
         }
 
@@ -50,7 +46,7 @@ namespace TelegramBotApi.Telegram
 
             this.OnUpdateReceive?.Invoke(this, new UpdateEventArgs() { Updates = updates });
         }
-
+        
         public event EventHandler<UpdateEventArgs> OnUpdateReceive;
 
         public void StartLongPull()

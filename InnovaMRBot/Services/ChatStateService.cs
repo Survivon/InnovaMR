@@ -13,9 +13,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
+using TelegramBotApi.Models.Enum;
 using TelegramBotApi.Models.Keyboard;
 using TelegramBotApi.Telegram;
-using TelegramBotApi.Telegram.Events;
 using TelegramBotApi.Telegram.Request;
 using Conversations = InnovaMRBot.Models.Conversations;
 using User = InnovaMRBot.Models.User;
@@ -56,6 +56,8 @@ namespace InnovaMRBot.Services
 
         private const string GUID_PATTERN = @"(\{){0,1}[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}(\}){0,1}";
 
+        private const string TICKET_NUMBER_PATTERN = @"\w+-[0-9]+";
+
         private const int MAX_COUNT_OF_ADMINS = 2;
 
         private readonly List<string> _changesNotation = new List<string>()
@@ -69,48 +71,99 @@ namespace InnovaMRBot.Services
         private readonly Telegram _telegramService;
 
         public CustomConversationState ConversationState { get; }
-        
+
         public ChatStateService(CustomConversationState conversationState, Telegram telegram)
         {
             ConversationState = conversationState ?? throw new ArgumentNullException(nameof(conversationState));
             _telegramService = telegram;
-            _telegramService.OnUpdateReceive += TelegramServiceOnUpdateReceive;
         }
 
-        private void TelegramServiceOnUpdateReceive(object sender, UpdateEventArgs e)
+        public async Task GetUpdateFromTelegramAsync(Update update)
         {
-            var result = new List<SendMessageRequest>();
-
-            foreach (var update in e.Updates)
+            if (update.Message != null)
             {
-                if (update.Message != null)
-                {
 
-                }
-                else if(update.CallbackQuery != null)
-                {
-                    
-                }
-                else if(update.InlineQuery != null)
-                {
-                    
-                }
-                else if (update.InlineResult != null)
-                {
+            }
+            else if (update.CallbackQuery != null)
+            {
 
-                }
+            }
+            else if (update.InlineQuery != null)
+            {
 
-                if(update.Message?.Chat == null) return;
+            }
+            else if (update.InlineResult != null)
+            {
 
+            }
+
+            // Debug
+            if (update.Message?.Chat != null)
+            {
                 var returnedMessage = new SendMessageRequest()
                 {
                     ChatId = update.Message.Chat.Id.ToString(),
                     Text = JsonConvert.SerializeObject(update),
+                    FormattingMessageType = FormattingMessageType.Default,
                 };
 
-                AddButtonForRequest(returnedMessage, "111", "https://fortia.atlassian.net/browse/INOCB-1186");
+                AddButtonForRequest(returnedMessage, "http://gitlab.fortia.fr/Fortia/Innova/merge_requests/5424", new List<string>()
+                {
+                    "https://fortia.atlassian.net/browse/INOCB-1186",
+                    "https://fortia.atlassian.net/browse/INOCB-2208"
+                });
 
-                _telegramService.SendMessageAsync(returnedMessage).ConfigureAwait(false);
+                await _telegramService.SendMessageAsync(returnedMessage);
+            }
+            else if (update.CallbackQuery?.Sender != null)
+            {
+                var returnedMessage = new SendMessageRequest()
+                {
+                    ChatId = update.CallbackQuery.Sender.Id.ToString(),
+                    Text = JsonConvert.SerializeObject(update),
+                    FormattingMessageType = FormattingMessageType.Default,
+                };
+
+                await _telegramService.SendMessageAsync(returnedMessage);
+
+                var answer = new EditMessageTextRequest()
+                {
+                    ChatId = update.CallbackQuery.Sender.Id.ToString(),
+                    Text = JsonConvert.SerializeObject(update),
+                    FormattingMessageType = FormattingMessageType.Default,
+                    EditMessageId = update.CallbackQuery.Message.Id.ToString(),
+                };
+
+                AddButtonForRequest(answer, "http://gitlab.fortia.fr/Fortia/Innova/merge_requests/5424", new List<string>()
+                {
+                    "https://fortia.atlassian.net/browse/INOCB-1186",
+                    "https://fortia.atlassian.net/browse/INOCB-2208"
+                }, 1);
+
+                await _telegramService.EditMessageAsync(answer);
+            }
+            else if (update.InlineQuery?.Sender != null)
+            {
+                var returnedMessage = new SendMessageRequest()
+                {
+                    ChatId = update.InlineQuery.Sender.Id.ToString(),
+                    Text = JsonConvert.SerializeObject(update),
+                    FormattingMessageType = FormattingMessageType.Default,
+                };
+
+                await _telegramService.SendMessageAsync(returnedMessage);
+            }
+            else if (update.InlineResult?.Sender != null)
+            {
+                var returnedMessage = new SendMessageRequest()
+                {
+                    ChatId = update.InlineResult.Sender.Id.ToString(),
+                    Text = JsonConvert.SerializeObject(update),
+                    FormattingMessageType = FormattingMessageType.Default,
+                };
+
+                await _telegramService.SendMessageAsync(returnedMessage);
+
             }
         }
 
@@ -147,7 +200,7 @@ namespace InnovaMRBot.Services
 
                 resultMessage.Text = $"Current chat is setup as MR with sync id: {syncId}";
             }
-            
+
             return resultMessage;
         }
 
@@ -256,7 +309,7 @@ namespace InnovaMRBot.Services
 
                 responseMessage.ChatId = conversation.MRChat.Id;
                 responseMessage.Text = messageText;
-                AddButtonForRequest(responseMessage, message.Message.Id.ToString(), mrUrl);
+                AddButtonForRequest(responseMessage, mrUrl, needMr.TicketsUrl);
 
                 responseMessageChain.Add(responseMessage);
 
@@ -511,7 +564,7 @@ namespace InnovaMRBot.Services
 
             return responseMessage;
         }
-        
+
         private async Task<Activity> RemoveMrConversationAsync(ITurnContext context)
         {
             var convesationId = context.Activity.Conversation.Id;
@@ -912,7 +965,7 @@ Thanks :)
                                 endDate);
                             break;
                     }
-                    
+
                     return result.Message;
                 }, context);
 
@@ -1128,26 +1181,43 @@ Thanks :)
             return $"{user.FirstName} {user.LastName}";
         }
 
-        private void AddButtonForRequest(SendMessageRequest message, string mrId, string mrUrl)
+        private void AddButtonForRequest(SendMessageRequest message, string mrLink, List<string> ticketLinks, int okCount = 0)
         {
+            var lineButton = new List<InlineKeyboardButton>()
+            {
+                new InlineKeyboardButton()
+                {
+                    Text = "👍" + (okCount == 0 ? string.Empty : $" ({okCount})"),
+                    CallbackData = $"/success reaction",
+                },
+                new InlineKeyboardButton()
+                {
+                    Text = "MR link",
+                    Url = mrLink,
+                },
+            };
+
+            var ticketButtons = new List<InlineKeyboardButton>();
+
+            foreach (var ticketLink in ticketLinks)
+            {
+                var text = Regex.Match(ticketLink, TICKET_NUMBER_PATTERN).Value;
+                ticketButtons.Add(new InlineKeyboardButton()
+                {
+                    Text = text,
+                    Url = ticketLink,
+                });
+            }
+
+            var buttons = new List<List<InlineKeyboardButton>>()
+            {
+                new List<InlineKeyboardButton>(lineButton),
+                new List<InlineKeyboardButton>(ticketButtons),
+            };
+
             message.ReplyMarkup = new InlineKeyboardMarkup()
             {
-                InlineKeyboardButtons = new List<List<InlineKeyboardButton>>()
-                {
-                    new List<InlineKeyboardButton>()
-                    {
-                        new InlineKeyboardButton()
-                        {
-                            Text = "👍",
-                            CallbackData = $"/success reaction {mrId}",
-                        },
-                        new InlineKeyboardButton()
-                        {
-                            Text = "MR link",
-                            Url = mrUrl,
-                        },
-                    },
-                },
+                InlineKeyboardButtons = buttons,
             };
         }
 

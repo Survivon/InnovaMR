@@ -1,11 +1,10 @@
-﻿
-namespace TelegramBotApi.Telegram.DataAccess.Request.Requests
+﻿namespace TelegramBotApi.Telegram.DataAccess.Request.Requests
 {
+    using Parsers;
+    using Request;
     using System;
     using System.Net.Http;
     using System.Net.Http.Headers;
-    using Parsers;
-    using Request;
 
     internal class ExternalRequest<T,P> : Request<T>
     {
