@@ -1,5 +1,4 @@
 ﻿using System;
-using Microsoft.Bot.Schema;
 
 namespace InnovaMRBot.Models
 {
@@ -15,6 +14,12 @@ namespace InnovaMRBot.Models
 
         public string Name { get; set; }
 
-        public Activity BaseActivity { get; set; }
+        public ConversationSetting ConversationSettingMrChat { get; set; }
+
+        //public ConversationSetting ConversationSettingAlertChat { get; set; }
+
+        //public Guid? AlertChatId { get; set; }
+
+        public Guid MRChatId { get; set; }
     }
 }

@@ -90,7 +90,7 @@ namespace TelegramBotApi.Extension
 
             return result;
         }
-
+        
         public static async Task SetWebhookAsync(this Telegram telegram, string webhookUrl)
         {
             var webhookRequest = new WebhookEntity()
@@ -516,7 +516,7 @@ namespace TelegramBotApi.Extension
 
         public static async Task<bool> TryUnbanChatMemberAsync(this Telegram telegram, KickChatMemberRequest kickRequest)
         {
-            var url = telegram.GetFullPathUrl("answerCallbackQuery");
+            var url = telegram.GetFullPathUrl("unbanChatMember");
 
             var request = new ExternalRequest<ResponseAnswer<bool>, KickChatMemberRequest>()
             {
@@ -534,7 +534,7 @@ namespace TelegramBotApi.Extension
 
         public static async Task<bool> SendCallbackAnswerAsync(this Telegram telegram, AnswerCallbackQueryRequest answer)
         {
-            var url = telegram.GetFullPathUrl("unbanChatMember");
+            var url = telegram.GetFullPathUrl("answerCallbackQuery");
 
             var request = new ExternalRequest<ResponseAnswer<bool>, AnswerCallbackQueryRequest>()
             {
@@ -545,7 +545,7 @@ namespace TelegramBotApi.Extension
 
             var response = await RequestSender.Execute(DataAccessMode.Server, request, url).ConfigureAwait(false);
 
-            var isSuccess = response.Result.Result;
+            var isSuccess = response.Result?.Result ?? false;
 
             return isSuccess;
         }
@@ -620,7 +620,7 @@ namespace TelegramBotApi.Extension
                 foreach (var propertyInfo in type.GetProperties())
                 {
                     var value = propertyInfo.GetValue(requestModel);
-                    if (value != null)
+                    if (value != null && !IsIgnoreableAttribute(propertyInfo))
                     {
                         if (!propertyInfo.GetType().IsPrimitive
                             && propertyInfo.PropertyType != typeof(string)
@@ -659,6 +659,23 @@ namespace TelegramBotApi.Extension
             }
 
             return result;
+        }
+
+        private static bool IsIgnoreableAttribute(PropertyInfo propertyInfo)
+        {
+            var attributes = propertyInfo.GetCustomAttributes(true);
+            if (attributes.Any())
+            {
+                foreach (var attr in attributes)
+                {
+                    if (attr is IgnoreDataMemberAttribute serializeAttr)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }

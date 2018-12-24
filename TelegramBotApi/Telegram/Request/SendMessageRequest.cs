@@ -19,9 +19,9 @@
                     case FormattingMessageType.Default:
                         return string.Empty;
                     case FormattingMessageType.Markdown:
-                        return "markdown-style";
+                        return "markdown";
                     case FormattingMessageType.HTML:
-                        return "HTML-style";
+                        return "HTML";
                     default:
                         return string.Empty;
                 }

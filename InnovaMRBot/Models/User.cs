@@ -1,4 +1,6 @@
 ﻿
+using System;
+
 namespace InnovaMRBot.Models
 {
     public class User
@@ -12,5 +14,7 @@ namespace InnovaMRBot.Models
         public string SkypeLogin { get; set; }
 
         public string ChatId { get; set; }
+
+        public ConversationSetting Conversation { get; set; }
     }
 }

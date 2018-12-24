@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InnovaMRBot.Models
 {
+    [Table("VersionedMergeRequest")]
     public class VersionedMergeRequest
     {
         public VersionedMergeRequest()
@@ -18,6 +18,12 @@ namespace InnovaMRBot.Models
         
         public DateTimeOffset? PublishDate { get; set; }
 
-        public List<MessageReaction> Reactions { get; set; }
+        public IList<MessageReaction> Reactions { get; set; }
+
+        public string AllDescription { get; set; }
+
+        public string Description { get; set; }
+
+        public MergeSetting MergeSetting { get; set; }
     }
 }

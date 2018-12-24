@@ -16,7 +16,7 @@ namespace InnovaMRBot.Controllers
 
         [HttpPost]
         [Route("some")]
-        public void GetUpdateFromTelegramAsync([FromBody]Update update)
+        public void GetUpdateFromTelegram([FromBody]Update update)
         {
             if (update == null) return;
 

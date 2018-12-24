@@ -6,10 +6,10 @@
     public class Chat
     {
         [DataMember(Name = "id")]
-        public int Id { get; set; }
+        public long Id { get; set; }
 
         [DataMember(Name = "type")]
-        public ChatType Type { get; set; }
+        public string Type { get; set; }
 
         [DataMember(Name = "title")]
         public string Title { get; set; }

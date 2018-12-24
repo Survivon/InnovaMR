@@ -1,11 +1,11 @@
-﻿using InnovaMRBot.Models;
+﻿using InnovaMRBot.Helpers;
+using InnovaMRBot.Models;
 using InnovaMRBot.Services.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using InnovaMRBot.Helpers;
 
 namespace InnovaMRBot.Services
 {
@@ -15,11 +15,13 @@ namespace InnovaMRBot.Services
             "<!DOCTYPE html><html><head><meta charset=\"utf-8\" /><title>Statistics</title><style>table, th, td { border: 1px solid black;border-collapse: collapse; } th, td { padding: 5px;text-align: left; } tr:nth-child(even) {background: #d1e2ff} tr:nth-child(odd) { background: #ffebd1} </style></head><body>{0}</body></html>";
 
         // ex: getalldata 24/11/2018 28/11/2018
-        public static ResponseMessage GetAllData(List<MergeSetting> merge, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetAllData(List<MergeSetting> merge, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
-            var result = new ResponseMessage();
-
             IEnumerable<IGrouping<string, MergeSetting>> groupedMerges;
+
+            MapUsers(merge, usersList);
+
+            var resultTable = new StringBuilder();
 
             if (start == default(DateTimeOffset) || end == default(DateTimeOffset))
             {
@@ -27,24 +29,124 @@ namespace InnovaMRBot.Services
             }
             else
             {
+                resultTable.Append($"<h2>Stat from {start:MM/dd/yy} to {end:MM/dd/yy}</h2>");
                 groupedMerges = merge.Where(m => m.PublishDate < end && m.PublishDate > start)
                     .GroupBy(m => m.Owner.Name);
             }
 
-            var resultTable = new StringBuilder();
 
-            resultTable.Append("<table style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR Link</th><th>Tickets Links</th><th>Description</th><th>Publish Date</th><th>Count of Change</th><th>Reviewers</th></tr>");
+            resultTable.Append("<table style=\"width: 100 % \">" +
+                               "<tr><th>MR Owner</th>" +
+                               "<th>MR Link</th>" +
+                               "<th>Tickets Links</th>" +
+                               "<th>Description</th>" +
+                               "<th>Publish Date</th>" +
+                               "<th>Count of Change</th>" +
+                               "<th>Reviewers</th>" +
+                               "<th>Version Publish Date</th>" +
+                               "<th>Version Description</th>" +
+                               "<th>Version Reaction</th>" +
+                               "</tr>");
 
             foreach (var groupedMerge in groupedMerges)
             {
                 var first = groupedMerge.FirstOrDefault();
                 if (first == null) continue;
 
-                resultTable.Append($"<tr><td rowspan=\"{groupedMerge.ToList().Count}\">{groupedMerge.Key}</td><td>{first.MrUrl}</td><td>{string.Join("<br>", first.TicketsUrl)}</td><td>{first.Description}</td><td>{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td><td>{first.CountOfChange}</td><td>{string.Join("<br>", first.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td></tr>");
+                var totalRowCount = GetTotalCount(merge.Where(c => c.Owner.Name.Equals(groupedMerge.Key)).ToList());
+
+                var firstVersion = first.VersionedSetting.FirstOrDefault();
+
+                var countOfRowsForFirstVersioned = first.VersionedSetting.Count;
+                countOfRowsForFirstVersioned = countOfRowsForFirstVersioned == 0 ? 1 : countOfRowsForFirstVersioned;
+
+                if (firstVersion == null)
+                {
+                    resultTable.Append($"<tr>" +
+                                       $"<td rowspan=\"{totalRowCount}\">{groupedMerge.Key}</td>" +
+                                       $"<td>{first.MrUrl}</td>" +
+                                       $"<td>{string.Join("<hr><br>", first.TicketsUrl.Split(';').ToList())}</td>" +
+                                       $"<td>{first.Description}</td><td>{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td><td>{first.CountOfChange}</td>" +
+                                       $"<td>{string.Join("<hr><br>", first.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"<td></td>" +
+                                       $"<td></td>" +
+                                       $"<td></td>" +
+                                       $"</tr>");
+                }
+                else
+                {
+                    resultTable.Append($"<tr>" +
+                                       $"<td rowspan=\"{totalRowCount}\">" +
+                                       $"{groupedMerge.Key}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.MrUrl}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", first.TicketsUrl.Split(';').ToList())}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.Description}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.CountOfChange}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", first.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"<td>{firstVersion.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                                       $"<td>{firstVersion.Description}</td>" +
+                                       $"<td>{string.Join("<hr><br>", firstVersion.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"</tr>");
+
+                    foreach (var versionedMergeRequest in first.VersionedSetting.Skip(1))
+                    {
+                        resultTable.Append(
+                            $"<tr>" +
+                            $"<td>{versionedMergeRequest.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td>{versionedMergeRequest.Description}</td>" +
+                            $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"</tr>");
+                    }
+                }
+
                 foreach (var mergeSetting in groupedMerge.Skip(1))
                 {
-                    resultTable.Append(
-                        $"<tr><td>{mergeSetting.MrUrl}</td><td>{string.Join("<br>", mergeSetting.TicketsUrl)}</td><td>{mergeSetting.Description}</td><td>{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td><td>{mergeSetting.CountOfChange}</td><td>{string.Join("<br>", mergeSetting.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td></tr>");
+                    var firstVersioned = mergeSetting.VersionedSetting.FirstOrDefault();
+                    countOfRowsForFirstVersioned = mergeSetting.VersionedSetting.Count;
+                    countOfRowsForFirstVersioned = countOfRowsForFirstVersioned == 0 ? 1 : countOfRowsForFirstVersioned;
+
+                    if (firstVersioned == null)
+                    {
+                        resultTable.Append(
+                            $"<tr>" +
+                            $"<td>{mergeSetting.MrUrl}</td>" +
+                            $"<td>{string.Join("<hr><br>", mergeSetting.TicketsUrl.Split(';').ToList())}</td>" +
+                            $"<td>{mergeSetting.Description}</td>" +
+                            $"<td>{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td>{mergeSetting.CountOfChange}</td>" +
+                            $"<td>{string.Join("<hr><br>", mergeSetting.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td></td>" +
+                            $"<td></td>" +
+                            $"<td></td>" +
+                            $"</tr>");
+                    }
+                    else
+                    {
+
+                        resultTable.Append(
+                            $"<tr>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.MrUrl}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').ToList())}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.Description}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.CountOfChange}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", mergeSetting.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td>{firstVersioned.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td>{firstVersioned.Description}</td>" +
+                            $"<td>{string.Join("<hr><br>", firstVersioned.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"</tr>");
+
+                        foreach (var versionedMergeRequest in mergeSetting.VersionedSetting.Skip(1))
+                        {
+                            resultTable.Append(
+                                $"<tr>" +
+                                $"<td>{versionedMergeRequest.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                                $"<td>{versionedMergeRequest.Description}</td>" +
+                                $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                $"</tr>");
+                        }
+                    }
                 }
             }
 
@@ -56,28 +158,27 @@ namespace InnovaMRBot.Services
 
             var fileUrl = GetFileName(allHtml, "alldata");
 
-            result.Message = fileUrl;
-
-            return result;
+            return fileUrl;
         }
 
         // ex: getmrreaction 24/11/2018 28/11/2018
-        public static ResponseMessage GetMRReaction(List<MergeSetting> merge, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetMRReaction(List<MergeSetting> merge, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
-            var result = new ResponseMessage();
-
             IEnumerable<IGrouping<string, MergeSetting>> groupedMerges;
+
+            MapUsers(merge, usersList);
+
+            var resultTable = new StringBuilder();
             if (start == default(DateTimeOffset) || end == default(DateTimeOffset))
             {
                 groupedMerges = merge.GroupBy(m => m.Owner.Name);
             }
             else
             {
+                resultTable.Append($"<h2>Stat from {start:MM/dd/yy} to {end:MM/dd/yy}</h2>");
                 groupedMerges = merge.Where(m => m.PublishDate < end && m.PublishDate > start)
                     .GroupBy(m => m.Owner.Name);
             }
-
-            var resultTable = new StringBuilder();
 
             resultTable.Append("<table style=\"width: 100 % \"><tr><th>MR Owner</th><th>MR Link</th><th>Tickets Links</th><th>MR Reaction</th><th>Avg Reaction</th></tr>");
 
@@ -88,12 +189,31 @@ namespace InnovaMRBot.Services
 
                 var lastVersion = GetLastVersion(first);
 
-                resultTable.Append($"<tr><td rowspan=\"{groupedMerge.ToList().Count}\">{groupedMerge.Key}</td><td>{first.MrUrl}</td><td>{string.Join("<br>", first.TicketsUrl)}</td><td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td><td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersion.Reactions.Count).MinutesToCorrectTimeConverter()}</td></tr>");
+                var lastVersionCount = lastVersion.Reactions.Count;
+                lastVersionCount = lastVersionCount == 0 ? 1 : lastVersionCount;
+
+                resultTable.Append($"<tr>" +
+                                   $"<td rowspan=\"{groupedMerge.ToList().Count}\">{groupedMerge.Key}</td>" +
+                                   $"<td>{first.MrUrl}</td>" +
+                                   $"<td>{string.Join("<br>", first.TicketsUrl.Split(';').ToList())}</td>" +
+                                   $"<td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
+                                   $"<td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
+                                   $"</tr>");
+
                 foreach (var mergeSetting in groupedMerge.Skip(1))
                 {
                     lastVersion = GetLastVersion(mergeSetting);
+
+                    lastVersionCount = lastVersion.Reactions.Count;
+                    lastVersionCount = lastVersionCount == 0 ? 1 : lastVersionCount;
+
                     resultTable.Append(
-                        $"<tr><td>{mergeSetting.MrUrl}</td><td>{string.Join("<br>", mergeSetting.TicketsUrl)}</td><td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td><td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersion.Reactions.Count).MinutesToCorrectTimeConverter()}</td></tr>");
+                        $"<tr>" +
+                        $"<td>{mergeSetting.MrUrl}</td>" +
+                        $"<td>{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').ToList())}</td>" +
+                        $"<td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
+                        $"<td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
+                        $"</tr>");
                 }
             }
 
@@ -105,35 +225,30 @@ namespace InnovaMRBot.Services
 
             var fileUrl = GetFileName(allHtml, "mrreaction");
 
-            result.Message = fileUrl;
-
-            return result;
+            return fileUrl;
         }
 
         // ex: getusermrreaction 24/11/2018 28/11/2018
-        public static ResponseMessage GetUsersMRReaction(List<MergeSetting> merges, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetUsersMRReaction(List<MergeSetting> merges, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
-            var result = new ResponseMessage();
-
-            IEnumerable<IGrouping<string, MergeSetting>> groupedMerges;
-            if (start == default(DateTimeOffset) || end == default(DateTimeOffset))
-            {
-                groupedMerges = merges.GroupBy(m => m.Owner.Name);
-            }
-            else
-            {
-                groupedMerges = merges.Where(m => m.PublishDate < end && m.PublishDate > start)
-                    .GroupBy(m => m.Owner.Name);
-            }
+            MapUsers(merges, usersList);
 
             var resultTable = new StringBuilder();
+            if (start != default(DateTimeOffset) && end != default(DateTimeOffset))
+            {
+                resultTable.Append($"<h2>Stat from {start:MM/dd/yy} to {end:MM/dd/yy}</h2>");
+            }
 
             resultTable.Append("<table style=\"width: 100 % \"><tr><th>Dev</th><th>Avg Response Time</th></tr>");
 
-            foreach (var groupedMerge in groupedMerges)
+            foreach (var user in usersList)
             {
                 resultTable.Append(
-                    $"<tr><td>{groupedMerge.Key}</td><td>{GetAvgReactionToOtherMerge(merges, groupedMerge.Key).MinutesToCorrectTimeConverter()}</td></tr>");
+                    $"<tr>" +
+                    $"<td>{user.Name}</td>" +
+                    $"<td>{GetAvgReactionToOtherMerge(merges, user.Name, start, end).MinutesToCorrectTimeConverter()}</td>" +
+                    $"</tr>");
+
             }
 
             resultTable.Append("</table>");
@@ -144,28 +259,27 @@ namespace InnovaMRBot.Services
 
             var fileUrl = GetFileName(allHtml, "usermrreaction");
 
-            result.Message = fileUrl;
-
-            return result;
+            return fileUrl;
         }
 
         // ex: getunmarked 24/11/2018 28/11/2018
-        public static ResponseMessage GetUnmarkedCountMergePerDay(List<MergeSetting> merge, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetUnmarkedCountMergePerDay(List<MergeSetting> merge, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
-            var result = new ResponseMessage();
-
             IEnumerable<IGrouping<DateTime, MergeSetting>> groupedMerges;
+
+            MapUsers(merge, usersList);
+
+            var resultTable = new StringBuilder();
             if (start == default(DateTimeOffset) || end == default(DateTimeOffset))
             {
                 groupedMerges = merge.GroupBy(m => m.PublishDate.Value.Date);
             }
             else
             {
+                resultTable.Append($"<h2>Stat from {start:MM/dd/yy} to {end:MM/dd/yy}</h2>");
                 groupedMerges = merge.Where(m => m.PublishDate < end && m.PublishDate > start)
                     .GroupBy(m => m.PublishDate.Value.Date);
             }
-
-            var resultTable = new StringBuilder();
 
             resultTable.Append("<table style=\"width: 100 % \"><tr><th>Date</th><th>Count MR Without Review</th></tr>");
 
@@ -182,7 +296,46 @@ namespace InnovaMRBot.Services
 
             var fileUrl = GetFileName(allHtml, "unmarkedmrperday");
 
-            result.Message = fileUrl;
+            return fileUrl;
+        }
+
+        private static void MapUsers(List<MergeSetting> merge, List<User> usersList)
+        {
+            if (usersList == null || !usersList.Any()) return;
+
+            foreach (var mergeSetting in merge)
+            {
+                mergeSetting.Owner = usersList.FirstOrDefault(u => u.UserId.Equals(mergeSetting.OwnerId));
+                foreach (var versionedMergeRequest in mergeSetting.VersionedSetting)
+                {
+                    foreach (var reaction in versionedMergeRequest.Reactions)
+                    {
+                        reaction.User = usersList.FirstOrDefault(u => u.UserId.Equals(reaction.UserId));
+                    }
+                }
+
+                foreach (var mergeSettingReaction in mergeSetting.Reactions)
+                {
+                    mergeSettingReaction.User = usersList.FirstOrDefault(u => u.UserId.Equals(mergeSettingReaction.UserId));
+                }
+            }
+        }
+
+        private static int GetTotalCount(List<MergeSetting> merges)
+        {
+            var result = 0;
+
+            foreach (var mergeSetting in merges)
+            {
+                if (!mergeSetting.VersionedSetting.Any())
+                {
+                    result++;
+                }
+                else
+                {
+                    result += mergeSetting.VersionedSetting.Count;
+                }
+            }
 
             return result;
         }
@@ -204,7 +357,7 @@ namespace InnovaMRBot.Services
             return result;
         }
 
-        private static int GetAvgReactionToOtherMerge(List<MergeSetting> merges, string dev)
+        private static int GetAvgReactionToOtherMerge(List<MergeSetting> merges, string dev, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
             var reaction = 0;
 
@@ -215,16 +368,32 @@ namespace InnovaMRBot.Services
             {
                 if (mergeSetting.Reactions.Any(r => r.User.Name.Equals(dev)))
                 {
-                    allTime += mergeSetting.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
-                    countOfReview++;
+                    if (start == default(DateTimeOffset) && end == default(DateTimeOffset))
+                    {
+                        allTime += mergeSetting.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                        countOfReview++;
+                    }
+                    else if (mergeSetting.PublishDate > start && mergeSetting.PublishDate < end)
+                    {
+                        allTime += mergeSetting.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                        countOfReview++;
+                    }
                 }
 
                 foreach (var versionedMergeRequest in mergeSetting.VersionedSetting)
                 {
                     if (versionedMergeRequest.Reactions.Any(r => r.User.Name.Equals(dev)))
                     {
-                        allTime += versionedMergeRequest.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
-                        countOfReview++;
+                        if (start == default(DateTimeOffset) && end == default(DateTimeOffset))
+                        {
+                            allTime += versionedMergeRequest.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                            countOfReview++;
+                        }
+                        else if (versionedMergeRequest.PublishDate > start && versionedMergeRequest.PublishDate < end)
+                        {
+                            allTime += versionedMergeRequest.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                            countOfReview++;
+                        }
                     }
                 }
             }
@@ -239,13 +408,23 @@ namespace InnovaMRBot.Services
 
         private static string GetFileName(string content, string fileName)
         {
-            var result = string.Empty;
-            var fullFileName = $"{fileName}{DateTime.Now.Millisecond}.html";
+            var fullFileName = $"{fileName}{Guid.NewGuid().ToString()}.html";
+
+            var directoryPath = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "temp");
 
             var path = Path.Combine(
                 Directory.GetCurrentDirectory(),
-                //"wwwroot",
+                "wwwroot",
+                "temp",
                 fullFileName);
+
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
 
             if (!File.Exists(path))
             {
@@ -255,9 +434,7 @@ namespace InnovaMRBot.Services
 
             File.WriteAllText(path, content);
 
-            result = $"https://innovamrbot.azurewebsites.net/download/{fullFileName}";
-
-            return result;
+            return path;
         }
     }
 }

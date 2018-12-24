@@ -22,8 +22,6 @@ namespace InnovaMRBot.Bots
             {
                 throw new ArgumentNullException(nameof(loggerFactory));
             }
-
-            _logger = loggerFactory.CreateLogger<EchoWithCounterBot>();
             _logger.LogTrace("EchoBot turn start.");
             _service = service ?? throw new System.ArgumentNullException(nameof(service));
         }

@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <None Remove="BotConfigurationproduction.bot" />
+    <None Remove="MRBigIcon.png" />
     <None Remove="MRIcon.png" />
   </ItemGroup>
 
@@ -24,6 +25,7 @@
 
 
   <ItemGroup>
+    <EmbeddedResource Include="MRBigIcon.png" />
     <EmbeddedResource Include="MRIcon.png" />
   </ItemGroup>
 
