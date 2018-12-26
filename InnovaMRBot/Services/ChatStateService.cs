@@ -59,6 +59,8 @@ namespace InnovaMRBot.Services
 
         private const string HELP = @"/help";
 
+        private const string COMMON_DOCUMENT = @"/getcommondocument";
+
         private object _lockerSaveToDbObject = new object();
 
         private readonly List<string> _changesNotation = new List<string>()
@@ -101,7 +103,11 @@ namespace InnovaMRBot.Services
                                 {
                                     new KeyboardButton()
                                     {
-                                        Text = "/help",
+                                        Text = HELP,
+                                    },
+                                    new KeyboardButton()
+                                    {
+                                        Text = COMMON_DOCUMENT,
                                     },
                                 },
                             },
@@ -125,6 +131,28 @@ For all of this statistics you can add start and end date of publish date(For ex
                         FormattingMessageType = FormattingMessageType.HTML,
                     });
 
+                }
+                else if (message.Equals(COMMON_DOCUMENT))
+                {
+                    answerMessages.Add(new SendMessageRequest()
+                    {
+                        Text = "Document Link",
+                        ChatId = update.Message.Chat.Id.ToString(),
+                        ReplyMarkup = new InlineKeyboardMarkup()
+                        {
+                            InlineKeyboardButtons = new List<List<InlineKeyboardButton>>()
+                            {
+                                new List<InlineKeyboardButton>()
+                                {
+                                    new InlineKeyboardButton()
+                                    {
+                                        Text = "Link",
+                                        Url = "https://docs.google.com/document/d/1MNI8ZY-Fciqk6q7PZnJz2aDQe4TllQHsdOo6jpim_9s/edit",
+                                    },
+                                },
+                            },
+                        },
+                    });
                 }
                 else if (message.StartsWith(GET_STATISTIC, StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -471,6 +499,21 @@ For all of this statistics you can add start and end date of publish date(For ex
                 return;
             }
 
+            var users = _dbContext.Users.GetAll();
+            var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
+            if (needUser == null)
+            {
+                var savedUser = new User()
+                {
+                    Name = GetUserFullName(message.Message.Sender),
+                    UserId = userId,
+                };
+
+                AddOrUpdateUser(savedUser);
+
+                needUser = savedUser;
+            }
+
             if (await IsMrContainceAsync(mrUrl, conversation.MRChat.Id))
             {
                 // for updatedTicket
@@ -486,7 +529,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                 needMr.CountOfChange++;
 
                 responseMessage.ChatId = conversation.MRChat.Id;
-                responseMessage.Text = messageText;
+                responseMessage.Text = $"{messageText} \nby {needUser.Name}"; ;
                 AddButtonForRequest(responseMessage, mrUrl, needMr.TicketsUrl.Split(';').ToList());
 
                 var resMessage = await _telegramService.SendMessageAsync(responseMessage);
@@ -522,21 +565,6 @@ For all of this statistics you can add start and end date of publish date(For ex
             }
             else
             {
-                var users = _dbContext.Users.GetAll();
-                var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
-                if (needUser == null)
-                {
-                    var savedUser = new User()
-                    {
-                        Name = GetUserFullName(message.Message.Sender),
-                        UserId = userId,
-                    };
-
-                    AddOrUpdateUser(savedUser);
-
-                    needUser = savedUser;
-                }
-
                 var mrMessage = new MergeSetting { MrUrl = mrUrl, AllText = messageText };
 
                 var ticketRegex = new Regex(TICKET_PATTERN);
@@ -587,7 +615,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                 AddButtonForRequest(responseMessage, mrUrl, mrMessage.TicketsUrl.Split(';').ToList());
 
                 responseMessage.ChatId = conversation.MRChat.Id;
-                responseMessage.Text = messageText;
+                responseMessage.Text = $"{messageText} \nby {needUser.Name}";
 
                 var resMessage = await _telegramService.SendMessageAsync(responseMessage);
 

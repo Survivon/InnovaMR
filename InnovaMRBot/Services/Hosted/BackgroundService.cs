@@ -56,11 +56,6 @@ namespace InnovaMRBot.Services.Hosted
 
             var needTimeTime = DateTime.UtcNow;
 
-#if DEBUG
-
-            _timer = new Timer(CheckConversation, null, TimeSpan.Zero, TimeSpan.FromSeconds(120));
-#else
-            
             if (needTimeTime.Hour >= 15)
             {
                 needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day + 1, 15, 0, 0);
@@ -73,7 +68,6 @@ namespace InnovaMRBot.Services.Hosted
             var startTime = needTimeTime.Subtract(DateTime.UtcNow);
 
             _timer = new Timer(CheckConversation, null, startTime, TimeSpan.FromSeconds(3600));
-#endif
 
             return Task.CompletedTask;
         }
@@ -83,11 +77,8 @@ namespace InnovaMRBot.Services.Hosted
             _logger.LogInformation("Background Service is working.");
 
             var currentTime = DateTime.UtcNow;
-#if DEBUG
-            if (currentTime.Hour == currentTime.Hour + 1)
-#else
+
             if (currentTime.Hour == _alertMRTime.Hour)
-#endif
             {
                 lock (_locker)
                 {
@@ -110,6 +101,8 @@ namespace InnovaMRBot.Services.Hosted
                             needMR.Add(new Tuple<string, string, int>(merge.Owner.Name, merge.MrUrl, 2 - lastVersion.Reactions.Count));
                         }
                     }
+
+                    if (!needMR.Any()) return;
 
                     var resultBuilder = new StringBuilder();
 

@@ -18,6 +18,8 @@ namespace InnovaMRBot
                     logging.AddAzureWebAppDiagnostics();
                 })
                 .UseStartup<Startup>()
+                .UseIISIntegration()
+                .UseKestrel()
                 .Build();
     }
 }

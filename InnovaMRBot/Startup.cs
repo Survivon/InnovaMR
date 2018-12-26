@@ -44,47 +44,10 @@ namespace InnovaMRBot
 
         public void ConfigureServices(IServiceCollection services)
         {
-            var connection = Configuration.GetConnectionString("DefaultConnection");
+            var connection = Configuration.GetConnectionString(_isProduction ? "ServerConnection" : "DefaultConnection");
 
             services.AddDbContext<BotContext>(options =>
                 options.UseSqlServer(connection));
-
-//            services.AddBot<ChatWorkerBot>(options =>
-//            {
-//                var secretKey = Configuration.GetSection("botFileSecret")?.Value;
-//                var botFilePath = Configuration.GetSection("botFilePath")?.Value;
-
-//                var environment = _isProduction ? "production" : "development";
-
-//                var botConfig = MrConfigurationManager.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
-//                services.AddSingleton(sp => botConfig ?? throw new InvalidOperationException($"The .bot config file could not be loaded. ({botConfig})"));
-
-//                var service = botConfig.Services.FirstOrDefault(s => s.Type == "endpoint" && s.Name == environment);
-//                if (!(service is EndpointService endpointService))
-//                {
-//                    throw new InvalidOperationException($"The .bot file does not contain an endpoint with name '{environment}'.");
-//                }
-
-//                options.CredentialProvider = new SimpleCredentialProvider(endpointService.AppId, endpointService.AppPassword);
-
-//                ILogger logger = _loggerFactory.CreateLogger<ChatWorkerBot>();
-
-//                options.OnTurnError = async (context, exception) =>
-//                {
-//                    logger.LogError($"Exception caught : {exception}");
-//#if DEBUG
-//                    await context.SendActivityAsync($"{exception.Message} \n \n {exception.StackTrace}");
-//#else
-//                        await context.SendActivityAsync($"Something went wrong :(");
-//#endif
-//                };
-
-//                IStorage dataStore = new MemoryStorage();
-
-//                var conversationState = new CustomConversationState(dataStore);
-                
-//                options.State.Add(conversationState);
-//            });
 
             services.AddSingleton(sp => new Telegram());
 

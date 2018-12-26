@@ -5,6 +5,15 @@
     <CodeAnalysisRuleSet>EchoBotWithCounter.ruleset</CodeAnalysisRuleSet>
     <ApplicationIcon>photographer.ico</ApplicationIcon>
     <UserSecretsId>fef54123-d176-4e19-a771-6256ebf95b28</UserSecretsId>
+    <Configurations>Debug;Release;ReleaseDeploy</Configurations>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>TRACE;RELEASE;NETCOREAPP;NETCOREAPP2_0</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDeploy|AnyCPU'">
+    <DefineConstants>TRACE;RELEASEDEPLOY;NETCOREAPP;NETCOREAPP2_0;RELEASEDEPLOY;NETCOREAPP;NETCOREAPP2_0;RELEASEDEPLOY;NETCOREAPP;NETCOREAPP2_0;RELEASEDEPLOY;NETCOREAPP;NETCOREAPP2_0</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

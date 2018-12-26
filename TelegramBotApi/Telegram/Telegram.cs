@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,34 +8,41 @@ using TelegramBotApi.Telegram.Events;
 
 namespace TelegramBotApi.Telegram
 {
-
     public class Telegram
     {
         private const string UrlPattern = "https://api.telegram.org/bot{0}/{1}";
 
-        private string _botTokenKey = "744048631:AAE_4sUEI5WcDxAZ-HpHWCv-vmFbLI00FNQ";
-        private string _webhookUrl = "";
+#if DEBUG
+        private readonly string _botTokenKey = "747528977:AAEyuQwun0QxC0500WLoX5WFnZZk4765kiM";
+#else
+        private readonly string _botTokenKey = "744048631:AAE_4sUEI5WcDxAZ-HpHWCv-vmFbLI00FNQ";
+#endif
+
+        private string _webhook;
 
         public Telegram()
         {
 
         }
 
-        public Telegram(string botToken) : this()
+        public Telegram(string botToken = null)
         {
-            this._botTokenKey = botToken;
+            if (!string.IsNullOrEmpty(botToken))
+            {
+                _botTokenKey = botToken;
+            }
         }
 
-        public Telegram(string webhookUrl, string botToken = null)
+        public Telegram(string webhook, string botToken = null)
         {
             if (!string.IsNullOrEmpty(botToken))
             {
                 _botTokenKey = botToken;
             }
 
-            if (!string.IsNullOrEmpty(webhookUrl))
+            if (!string.IsNullOrEmpty(webhook))
             {
-                _webhookUrl = webhookUrl;
+                _webhook = webhook;
             }
         }
 
