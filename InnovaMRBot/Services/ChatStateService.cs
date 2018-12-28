@@ -11,7 +11,7 @@ using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Enum;
 using TelegramBotApi.Models.Keyboard;
-using TelegramBotApi.Telegram; 
+using TelegramBotApi.Telegram;
 using TelegramBotApi.Telegram.Request;
 using User = InnovaMRBot.Models.User;
 
@@ -89,11 +89,19 @@ namespace InnovaMRBot.Services
                 var message = update.Message.Text;
                 if (message.Equals(START))
                 {
+                    var savedUser = new User()
+                    {
+                        Name = GetUserFullName(update.Message.Sender),
+                        UserId = update.Message.Sender.Id.ToString(),
+                    };
+
+                    AddOrUpdateUser(savedUser, false);
+
                     // get start message
                     answerMessages.Add(new SendMessageRequest()
                     {
                         ChatId = update.Message.Chat.Id.ToString(),
-                        Text = "Hi! I'm Bot for help to work with MR for Innova 😊 If you have some question please send me /help or visit site http://innovamrbot.azurewebsites.net/",
+                        Text = $"Hi, {savedUser.Name}! I'm Bot for help to work with MR for Innova 😊 If you have some question please send me /help or visit site http://innovamrbot.azurewebsites.net/",
                         ReplyMarkup = new ReplyKeyboardMarkup()
                         {
                             IsHideKeyboardAfterClick = true,
@@ -548,7 +556,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                 var description = new Regex(TICKET_PATTERN)
                     .Replace(new Regex(MR_PATTERN).Replace(messageText, string.Empty), string.Empty).Trim();
 
-                var lineOfMessage = description.Split('\r').ToList();
+                var lineOfMessage = description.Split('\n').ToList();
                 var firstLine = lineOfMessage.FirstOrDefault();
 
                 if (_changesNotation.Any(c => c.Equals(firstLine, StringComparison.InvariantCultureIgnoreCase)))
@@ -1432,13 +1440,14 @@ For all of this statistics you can add start and end date of publish date(For ex
         ////    return await GetNewUserAsync(storeProvider);
         ////}
 
-        private void AddOrUpdateUser(User user)
+        private void AddOrUpdateUser(User user, bool isNeedUpdate = true)
         {
             var users = _dbContext.Users.GetAll();
 
             if (users.Any(u => u.UserId.Equals(user.UserId)))
             {
-                _dbContext.Users.Update(user);
+                if (isNeedUpdate)
+                    _dbContext.Users.Update(user);
             }
             else
             {

@@ -64,8 +64,8 @@ namespace InnovaMRBot.Services
                 {
                     resultTable.Append($"<tr>" +
                                        $"<td rowspan=\"{totalRowCount}\">{groupedMerge.Key}</td>" +
-                                       $"<td>{first.MrUrl}</td>" +
-                                       $"<td>{string.Join("<hr><br>", first.TicketsUrl.Split(';').ToList())}</td>" +
+                                       $"<td><a href=\"{first.MrUrl}\">{first.MrUrl}</a></td>" +
+                                       $"<td>{string.Join("<hr><br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                                        $"<td>{first.Description}</td><td>{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td><td>{first.CountOfChange}</td>" +
                                        $"<td>{string.Join("<hr><br>", first.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                                        $"<td></td>" +
@@ -78,8 +78,8 @@ namespace InnovaMRBot.Services
                     resultTable.Append($"<tr>" +
                                        $"<td rowspan=\"{totalRowCount}\">" +
                                        $"{groupedMerge.Key}</td>" +
-                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.MrUrl}</td>" +
-                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", first.TicketsUrl.Split(';').ToList())}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\"><a href=\"{first.MrUrl}\">{first.MrUrl}</a></td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.Description}</td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.CountOfChange}</td>" +
@@ -110,8 +110,8 @@ namespace InnovaMRBot.Services
                     {
                         resultTable.Append(
                             $"<tr>" +
-                            $"<td>{mergeSetting.MrUrl}</td>" +
-                            $"<td>{string.Join("<hr><br>", mergeSetting.TicketsUrl.Split(';').ToList())}</td>" +
+                            $"<td><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td>" +
+                            $"<td>{string.Join("<hr><br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                             $"<td>{mergeSetting.Description}</td>" +
                             $"<td>{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                             $"<td>{mergeSetting.CountOfChange}</td>" +
@@ -126,8 +126,8 @@ namespace InnovaMRBot.Services
 
                         resultTable.Append(
                             $"<tr>" +
-                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.MrUrl}</td>" +
-                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').ToList())}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\"><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.Description}</td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.CountOfChange}</td>" +
@@ -194,8 +194,8 @@ namespace InnovaMRBot.Services
 
                 resultTable.Append($"<tr>" +
                                    $"<td rowspan=\"{groupedMerge.ToList().Count}\">{groupedMerge.Key}</td>" +
-                                   $"<td>{first.MrUrl}</td>" +
-                                   $"<td>{string.Join("<br>", first.TicketsUrl.Split(';').ToList())}</td>" +
+                                   $"<td><a href=\"{first.MrUrl}\">{first.MrUrl}</a></td>" +
+                                   $"<td>{string.Join("<br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                                    $"<td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
                                    $"<td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
                                    $"</tr>");
@@ -209,8 +209,8 @@ namespace InnovaMRBot.Services
 
                     resultTable.Append(
                         $"<tr>" +
-                        $"<td>{mergeSetting.MrUrl}</td>" +
-                        $"<td>{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').ToList())}</td>" +
+                        $"<td><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td>" +
+                        $"<td>{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                         $"<td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
                         $"<td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
                         $"</tr>");
