@@ -5,6 +5,7 @@ using Microsoft.Bot.Schema;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TelegramBotApi.Extension;
@@ -13,6 +14,7 @@ using TelegramBotApi.Models.Enum;
 using TelegramBotApi.Models.Keyboard;
 using TelegramBotApi.Telegram;
 using TelegramBotApi.Telegram.Request;
+using MessageReaction = InnovaMRBot.Models.MessageReaction;
 using User = InnovaMRBot.Models.User;
 
 namespace InnovaMRBot.Services
@@ -42,6 +44,12 @@ namespace InnovaMRBot.Services
         private const string START_READ_ALL_MESSAGE = "/get all message";
 
         private const string MR_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/[0-9]+";
+
+        private const string MR_WITH_DIFF_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/[0-9]+\/diffs";
+
+        private const string MR_WITH_SLASH_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/[0-9]+\/";
+
+        private const string MR_REMOVE_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/";
 
         private const string TICKET_PATTERN = @"https?:\/\/fortia.atlassian.net\/browse\/\w+-[0-9]+";
 
@@ -202,7 +210,15 @@ For all of this statistics you can add start and end date of publish date(For ex
             }
             else if (update.CallbackQuery != null)
             {
-                SetupMessageReactionAsync(update).ConfigureAwait(false);
+                switch (update.CallbackQuery.Data)
+                {
+                    case "/success reaction":
+                        SetupMessageReactionAsync(update).ConfigureAwait(false);
+                        break;
+                    case "/get stat":
+                        GetMergeStatAsync(update).ConfigureAwait(false);
+                        break;
+                }
             }
             else if (update.InlineQuery != null)
             {
@@ -220,6 +236,97 @@ For all of this statistics you can add start and end date of publish date(For ex
         }
 
         #region Telegram part
+
+        private async Task GetMergeStatAsync(Update update)
+        {
+            var userId = update.CallbackQuery.Sender.Id.ToString();
+            var messageId = update.CallbackQuery.Message.Id.ToString();
+
+            var conversations = _dbContext.Conversations.GetAll();
+            var conversation = conversations.FirstOrDefault(c => c.MRChat != null);
+
+            if (conversation == null) return;
+
+            var users = _dbContext.Users.GetAll().ToList();
+            var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
+            if (needUser == null)
+            {
+                var savedUser = new User()
+                {
+                    Name = GetUserFullName(update.CallbackQuery.Sender),
+                    UserId = userId,
+                };
+
+                AddOrUpdateUser(savedUser);
+
+                needUser = savedUser;
+            }
+
+            var needMr = conversation.ListOfMerge.FirstOrDefault(m => m.TelegramMessageId.Equals(messageId));
+            if (needMr != null)
+            {
+                var textForShare = new StringBuilder();
+                textForShare.AppendLine($"Reaction for MR {new Regex(MR_REMOVE_PATTERN).Replace(needMr.MrUrl, string.Empty)} by {users.FirstOrDefault(c => c.UserId.Equals(needMr.OwnerId)).Name}");
+                textForShare.AppendLine();
+
+                if (needMr.Reactions.Any())
+                {
+                    textForShare.AppendLine("Members:");
+                    foreach (var messageReaction in needMr.Reactions)
+                    {
+                        textForShare.AppendLine(
+                            $"{users.FirstOrDefault(c => c.UserId.Equals(messageReaction.UserId)).Name} in {messageReaction.ReactionTime:MM/dd/yyyy H:mm:ss}");
+                    }
+                }
+                else
+                {
+                    textForShare.AppendLine("No reactions to this MR 😔");
+                }
+
+                await _telegramService.SendCallbackAnswerAsync(new AnswerCallbackQueryRequest()
+                {
+                    IsNeedShowAlert = true,
+                    Text = textForShare.ToString(),
+                    CallbackId = update.CallbackQuery.Id,
+                });
+            }
+            else
+            {
+                var versionOffMr = conversation.ListOfMerge.SelectMany(m => m.VersionedSetting)
+                    .FirstOrDefault(v => v.Id.Equals(messageId));
+                if (versionOffMr != null)
+                {
+                    var versionedMr =
+                        conversation.ListOfMerge.FirstOrDefault(
+                            m => m.VersionedSetting.Any(v => v.Id.Equals(messageId)));
+
+                    var textForShare = new StringBuilder();
+                    textForShare.AppendLine($"Reaction for MR {new Regex(MR_REMOVE_PATTERN).Replace(versionedMr.MrUrl, string.Empty)} by {users.FirstOrDefault(c => c.UserId.Equals(versionedMr.OwnerId)).Name}");
+                    textForShare.AppendLine();
+
+                    if (versionOffMr.Reactions.Any())
+                    {
+                        textForShare.AppendLine("Members:");
+                        foreach (var messageReaction in versionOffMr.Reactions)
+                        {
+                            textForShare.AppendLine(
+                                $"{users.FirstOrDefault(c => c.UserId.Equals(messageReaction.UserId)).Name} in {messageReaction.ReactionTime:MM/dd/yyyy H:mm:ss}");
+                        }
+                    }
+                    else
+                    {
+                        textForShare.AppendLine("No reactions to this MR 😔");
+                    }
+
+                    await _telegramService.SendCallbackAnswerAsync(new AnswerCallbackQueryRequest()
+                    {
+                        IsNeedShowAlert = true,
+                        Text = textForShare.ToString(),
+                        CallbackId = update.CallbackQuery.Id,
+                    });
+                }
+            }
+        }
 
         private async Task SetupMessageReactionAsync(Update update)
         {
@@ -261,12 +368,29 @@ For all of this statistics you can add start and end date of publish date(For ex
             {
                 if (needMr.Reactions.Any(r => r.UserId.Equals(userId)))
                 {
+                    needMr.Reactions.RemoveAll(r => r.UserId.Equals(userId));
+
+                    _dbContext.Conversations.Update(conversation);
+
                     await _telegramService.SendCallbackAnswerAsync(new AnswerCallbackQueryRequest()
                     {
                         IsNeedShowAlert = true,
-                        Text = "Your reaction is already saved",
+                        Text = "Your reaction has been cancelled",
                         CallbackId = update.CallbackQuery.Id,
                     });
+
+                    AddButtonForRequest(returnedMessage, needMr.MrUrl, needMr.TicketsUrl.Split(';').ToList(), needMr.Reactions.Count);
+
+                    returnedMessage.ChatId = conversation.MRChat.Id;
+                    returnedMessage.Text = $"{needMr.Description} \nby {needUser.Name}";
+                    returnedMessage.EditMessageId = messageId;
+
+                    await _telegramService.EditMessageAsync(returnedMessage);
+
+                    lock (_lockerSaveToDbObject)
+                    {
+                        _dbContext.Save();
+                    }
 
                     return;
                 }
@@ -296,7 +420,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                 AddButtonForRequest(returnedMessage, needMr.MrUrl, needMr.TicketsUrl.Split(';').ToList(), needMr.Reactions.Count);
 
                 returnedMessage.ChatId = conversation.MRChat.Id;
-                returnedMessage.Text = needMr.AllText;
+                returnedMessage.Text = $"{needMr.Description} \nby {users.FirstOrDefault(c => c.UserId.Equals(needMr.OwnerId)).Name}";
                 returnedMessage.EditMessageId = messageId;
 
                 await _telegramService.EditMessageAsync(returnedMessage);
@@ -314,12 +438,29 @@ For all of this statistics you can add start and end date of publish date(For ex
 
                     if (versionOffMr.Reactions.Any(r => r.UserId.Equals(userId)))
                     {
+                        versionOffMr.Reactions.RemoveAll(r => r.UserId.Equals(userId));
+
+                        _dbContext.Conversations.Update(conversation);
+
                         await _telegramService.SendCallbackAnswerAsync(new AnswerCallbackQueryRequest()
                         {
                             IsNeedShowAlert = true,
-                            Text = "Your reaction is already saved",
+                            Text = "Your reaction has been cancelled",
                             CallbackId = update.CallbackQuery.Id,
                         });
+
+                        AddButtonForRequest(returnedMessage, versionedMr.MrUrl, versionedMr.TicketsUrl.Split(';').ToList(), versionOffMr.Reactions.Count);
+
+                        returnedMessage.ChatId = conversation.MRChat.Id;
+                        returnedMessage.Text = $"{versionOffMr.Description} \nby {users.FirstOrDefault(c => c.UserId.Equals(versionedMr.OwnerId)).Name}";
+                        returnedMessage.EditMessageId = messageId;
+
+                        await _telegramService.EditMessageAsync(returnedMessage);
+
+                        lock (_lockerSaveToDbObject)
+                        {
+                            _dbContext.Save();
+                        }
 
                         return;
                     }
@@ -349,7 +490,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                     AddButtonForRequest(returnedMessage, versionedMr.MrUrl, versionedMr.TicketsUrl.Split(';').ToList(), versionOffMr.Reactions.Count);
 
                     returnedMessage.ChatId = conversation.MRChat.Id;
-                    returnedMessage.Text = versionOffMr.AllDescription;
+                    returnedMessage.Text = $"{versionOffMr.Description} \nby {users.FirstOrDefault(c => c.UserId.Equals(versionedMr.OwnerId)).Name}";
                     returnedMessage.EditMessageId = messageId;
 
                     await _telegramService.EditMessageAsync(returnedMessage);
@@ -492,6 +633,16 @@ For all of this statistics you can add start and end date of publish date(For ex
 
             var mrRegex = new Regex(MR_PATTERN);
             var mrUrlMatch = mrRegex.Match(messageText);
+
+            if (new Regex(MR_WITH_DIFF_PATTERN).IsMatch(messageText))
+            {
+                messageText = new Regex(MR_WITH_DIFF_PATTERN).Replace(messageText, string.Empty).Trim(new char[] { '\r', '\n' });
+            }
+            else if (new Regex(MR_WITH_SLASH_PATTERN).IsMatch(messageText))
+            {
+                messageText = new Regex(MR_WITH_SLASH_PATTERN).Replace(messageText, string.Empty).Trim(new char[] { '\r', '\n' });
+            }
+
             var mrUrl = mrUrlMatch.Value;
 
             var conversations = _dbContext.Conversations.GetAll();
@@ -536,23 +687,6 @@ For all of this statistics you can add start and end date of publish date(For ex
                 needMr.IsHadAlreadyChange = true;
                 needMr.CountOfChange++;
 
-                responseMessage.ChatId = conversation.MRChat.Id;
-                responseMessage.Text = $"{messageText} \nby {needUser.Name}"; ;
-                AddButtonForRequest(responseMessage, mrUrl, needMr.TicketsUrl.Split(';').ToList());
-
-                var resMessage = await _telegramService.SendMessageAsync(responseMessage);
-                responseMessageForUser.Text = "Well done! I'll send it 😊";
-
-                _telegramService.SendMessageAsync(responseMessageForUser).ConfigureAwait(false);
-
-                var versionedTicket = new VersionedMergeRequest()
-                {
-                    OwnerMergeId = needMr.TelegramMessageId,
-                    PublishDate = DateTimeOffset.UtcNow,
-                    Id = resMessage.Id.ToString(),
-                    AllDescription = messageText,
-                };
-
                 var description = new Regex(TICKET_PATTERN)
                     .Replace(new Regex(MR_PATTERN).Replace(messageText, string.Empty), string.Empty).Trim();
 
@@ -565,7 +699,24 @@ For all of this statistics you can add start and end date of publish date(For ex
                     description = string.Join('\r', lineOfMessage);
                 }
 
-                versionedTicket.Description = description;
+                var versionedTicket = new VersionedMergeRequest
+                {
+                    OwnerMergeId = needMr.TelegramMessageId,
+                    PublishDate = DateTimeOffset.UtcNow,
+                    AllDescription = messageText,
+                    Description = description,
+                };
+
+                responseMessage.ChatId = conversation.MRChat.Id;
+                responseMessage.Text = $"{description} \nby {needUser.Name}";
+                AddButtonForRequest(responseMessage, mrUrl, needMr.TicketsUrl.Split(';').ToList());
+
+                var resMessage = await _telegramService.SendMessageAsync(responseMessage);
+                versionedTicket.Id = resMessage.Id.ToString();
+                responseMessageForUser.Text = "Well done! I'll send it 😊";
+
+                _telegramService.SendMessageAsync(responseMessageForUser).ConfigureAwait(false);
+
 
                 needMr.VersionedSetting.Add(versionedTicket);
 
@@ -595,7 +746,6 @@ For all of this statistics you can add start and end date of publish date(For ex
                 }
 
                 mrMessage.PublishDate = DateTimeOffset.UtcNow;
-                mrMessage.TelegramMessageId = message.Message.Id.ToString();
 
                 var lineOfMessage = description.Split('\r').ToList();
                 var firstLine = lineOfMessage.FirstOrDefault();
@@ -623,7 +773,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                 AddButtonForRequest(responseMessage, mrUrl, mrMessage.TicketsUrl.Split(';').ToList());
 
                 responseMessage.ChatId = conversation.MRChat.Id;
-                responseMessage.Text = $"{messageText} \nby {needUser.Name}";
+                responseMessage.Text = $"{description.Trim(new char[] { '\r', '\n' })} \nby {needUser.Name}";
 
                 var resMessage = await _telegramService.SendMessageAsync(responseMessage);
 
@@ -1486,13 +1636,30 @@ For all of this statistics you can add start and end date of publish date(For ex
 
             var ticketButtons = new List<InlineKeyboardButton>();
 
-            foreach (var ticketLink in ticketLinks)
+            foreach (var ticketLink in ticketLinks.Where(c => !string.IsNullOrEmpty(c)))
             {
                 var text = Regex.Match(ticketLink, TICKET_NUMBER_PATTERN).Value;
                 ticketButtons.Add(new InlineKeyboardButton()
                 {
                     Text = text,
                     Url = ticketLink,
+                });
+            }
+
+            if (ticketLinks.Count(c => !string.IsNullOrEmpty(c)) <= 1)
+            {
+                ticketButtons.Add(new InlineKeyboardButton()
+                {
+                    Text = "Stat 📈",
+                    CallbackData = "/get stat",
+                });
+            }
+            else
+            {
+                lineButton.Add(new InlineKeyboardButton()
+                {
+                    Text = "Stat 📈",
+                    CallbackData = "/get stat",
                 });
             }
 

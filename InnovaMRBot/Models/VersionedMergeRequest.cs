@@ -18,7 +18,7 @@ namespace InnovaMRBot.Models
         
         public DateTimeOffset? PublishDate { get; set; }
 
-        public IList<MessageReaction> Reactions { get; set; }
+        public List<MessageReaction> Reactions { get; set; }
 
         public string AllDescription { get; set; }
 
