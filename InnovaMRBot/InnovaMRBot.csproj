@@ -60,4 +60,9 @@
   </ItemGroup>
 
 
+  <ItemGroup>
+    <Folder Include="wwwroot\temp\" />
+  </ItemGroup>
+
+
 </Project>

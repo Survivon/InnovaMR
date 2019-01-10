@@ -59,8 +59,8 @@ namespace InnovaMRBot.Bots
 
                 if (activity.Text.Equals("/get all message"))
                 {
-                    var act = await _service.ReturnMessage(turnContext);
-                    await turnContext.SendActivityAsync(act).ConfigureAwait(false);
+                    //var act = await _service.ReturnMessage(turnContext);
+                    //await turnContext.SendActivityAsync(act).ConfigureAwait(false);
                     return;
                 }
 

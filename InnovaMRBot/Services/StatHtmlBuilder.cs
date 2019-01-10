@@ -65,9 +65,9 @@ namespace InnovaMRBot.Services
                     resultTable.Append($"<tr>" +
                                        $"<td rowspan=\"{totalRowCount}\">{groupedMerge.Key}</td>" +
                                        $"<td><a href=\"{first.MrUrl}\">{first.MrUrl}</a></td>" +
-                                       $"<td>{string.Join("<hr><br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
+                                       $"<td>{string.Join("<br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                                        $"<td>{first.Description}</td><td>{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td><td>{first.CountOfChange}</td>" +
-                                       $"<td>{string.Join("<hr><br>", first.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"<td>{string.Join("<hr><br>", first.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                                        $"<td></td>" +
                                        $"<td></td>" +
                                        $"<td></td>" +
@@ -83,10 +83,10 @@ namespace InnovaMRBot.Services
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.Description}</td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.CountOfChange}</td>" +
-                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", first.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", first.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                                        $"<td>{firstVersion.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                                        $"<td>{firstVersion.Description}</td>" +
-                                       $"<td>{string.Join("<hr><br>", firstVersion.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"<td>{string.Join("<hr><br>", firstVersion.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                                        $"</tr>");
 
                     foreach (var versionedMergeRequest in first.VersionedSetting.Skip(1))
@@ -95,7 +95,7 @@ namespace InnovaMRBot.Services
                             $"<tr>" +
                             $"<td>{versionedMergeRequest.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                             $"<td>{versionedMergeRequest.Description}</td>" +
-                            $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                             $"</tr>");
                     }
                 }
@@ -111,11 +111,11 @@ namespace InnovaMRBot.Services
                         resultTable.Append(
                             $"<tr>" +
                             $"<td><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td>" +
-                            $"<td>{string.Join("<hr><br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
+                            $"<td>{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                             $"<td>{mergeSetting.Description}</td>" +
                             $"<td>{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                             $"<td>{mergeSetting.CountOfChange}</td>" +
-                            $"<td>{string.Join("<hr><br>", mergeSetting.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td>{string.Join("<hr><br>", mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                             $"<td></td>" +
                             $"<td></td>" +
                             $"<td></td>" +
@@ -131,10 +131,10 @@ namespace InnovaMRBot.Services
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.Description}</td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.CountOfChange}</td>" +
-                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", mergeSetting.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                             $"<td>{firstVersioned.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                             $"<td>{firstVersioned.Description}</td>" +
-                            $"<td>{string.Join("<hr><br>", firstVersioned.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td>{string.Join("<hr><br>", firstVersioned.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                             $"</tr>");
 
                         foreach (var versionedMergeRequest in mergeSetting.VersionedSetting.Skip(1))
@@ -143,7 +143,7 @@ namespace InnovaMRBot.Services
                                 $"<tr>" +
                                 $"<td>{versionedMergeRequest.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
                                 $"<td>{versionedMergeRequest.Description}</td>" +
-                                $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
                                 $"</tr>");
                         }
                     }
@@ -189,30 +189,30 @@ namespace InnovaMRBot.Services
 
                 var lastVersion = GetLastVersion(first);
 
-                var lastVersionCount = lastVersion.Reactions.Count;
+                var lastVersionCount = lastVersion.Reactions.Count(r => r.ReactionType == ReactionType.Like);
                 lastVersionCount = lastVersionCount == 0 ? 1 : lastVersionCount;
 
                 resultTable.Append($"<tr>" +
                                    $"<td rowspan=\"{groupedMerge.ToList().Count}\">{groupedMerge.Key}</td>" +
                                    $"<td><a href=\"{first.MrUrl}\">{first.MrUrl}</a></td>" +
                                    $"<td>{string.Join("<br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
-                                   $"<td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
-                                   $"<td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
+                                   $"<td>{string.Join("<br>", lastVersion.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
+                                   $"<td>{(lastVersion.Reactions.Where(r => r.ReactionType == ReactionType.Like).Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
                                    $"</tr>");
 
                 foreach (var mergeSetting in groupedMerge.Skip(1))
                 {
                     lastVersion = GetLastVersion(mergeSetting);
 
-                    lastVersionCount = lastVersion.Reactions.Count;
+                    lastVersionCount = lastVersion.Reactions.Count(r => r.ReactionType == ReactionType.Like);
                     lastVersionCount = lastVersionCount == 0 ? 1 : lastVersionCount;
 
                     resultTable.Append(
                         $"<tr>" +
                         $"<td><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td>" +
                         $"<td>{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
-                        $"<td>{string.Join("<br>", lastVersion.Reactions.Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
-                        $"<td>{(lastVersion.Reactions.Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
+                        $"<td>{string.Join("<br>", lastVersion.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} - {c.ReactionInMinutes.MinutesToCorrectTimeConverter()}"))}</td>" +
+                        $"<td>{(lastVersion.Reactions.Where(r => r.ReactionType == ReactionType.Like).Sum(c => c.ReactionInMinutes) / lastVersionCount).MinutesToCorrectTimeConverter()}</td>" +
                         $"</tr>");
                 }
             }
@@ -285,7 +285,7 @@ namespace InnovaMRBot.Services
 
             foreach (var groupedMerge in groupedMerges.OrderBy(c => c.Key))
             {
-                resultTable.Append($"<tr><td>{groupedMerge.Key:MM/dd/yyyy}</td><td>{groupedMerge.Count(c => GetLastVersion(c).Reactions.Count < 2)}</td></tr>");
+                resultTable.Append($"<tr><td>{groupedMerge.Key:MM/dd/yyyy}</td><td>{groupedMerge.Count(c => GetLastVersion(c).Reactions.Count(r => r.ReactionType == ReactionType.Like) < 2)}</td></tr>");
             }
 
             resultTable.Append("</table>");
@@ -308,13 +308,13 @@ namespace InnovaMRBot.Services
                 mergeSetting.Owner = usersList.FirstOrDefault(u => u.UserId.Equals(mergeSetting.OwnerId));
                 foreach (var versionedMergeRequest in mergeSetting.VersionedSetting)
                 {
-                    foreach (var reaction in versionedMergeRequest.Reactions)
+                    foreach (var reaction in versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like))
                     {
                         reaction.User = usersList.FirstOrDefault(u => u.UserId.Equals(reaction.UserId));
                     }
                 }
 
-                foreach (var mergeSettingReaction in mergeSetting.Reactions)
+                foreach (var mergeSettingReaction in mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like))
                 {
                     mergeSettingReaction.User = usersList.FirstOrDefault(u => u.UserId.Equals(mergeSettingReaction.UserId));
                 }
@@ -345,7 +345,7 @@ namespace InnovaMRBot.Services
             var result = new VersionedMergeRequest()
             {
                 PublishDate = merge.PublishDate,
-                Reactions = merge.Reactions,
+                Reactions = merge.Reactions.Where(r => r.ReactionType == ReactionType.Like).ToList(),
             };
 
             if (merge.VersionedSetting != null && merge.VersionedSetting.Any())
@@ -366,32 +366,32 @@ namespace InnovaMRBot.Services
 
             foreach (var mergeSetting in merges)
             {
-                if (mergeSetting.Reactions.Any(r => r.User.Name.Equals(dev)))
+                if (mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).Any(r => r.User.Name.Equals(dev)))
                 {
                     if (start == default(DateTimeOffset) && end == default(DateTimeOffset))
                     {
-                        allTime += mergeSetting.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                        allTime += mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
                         countOfReview++;
                     }
                     else if (mergeSetting.PublishDate > start && mergeSetting.PublishDate < end)
                     {
-                        allTime += mergeSetting.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                        allTime += mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
                         countOfReview++;
                     }
                 }
 
                 foreach (var versionedMergeRequest in mergeSetting.VersionedSetting)
                 {
-                    if (versionedMergeRequest.Reactions.Any(r => r.User.Name.Equals(dev)))
+                    if (versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).Any(r => r.User.Name.Equals(dev)))
                     {
                         if (start == default(DateTimeOffset) && end == default(DateTimeOffset))
                         {
-                            allTime += versionedMergeRequest.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                            allTime += versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
                             countOfReview++;
                         }
                         else if (versionedMergeRequest.PublishDate > start && versionedMergeRequest.PublishDate < end)
                         {
-                            allTime += versionedMergeRequest.Reactions.FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
+                            allTime += versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).FirstOrDefault(r => r.User.Name.Equals(dev)).ReactionInMinutes;
                             countOfReview++;
                         }
                     }

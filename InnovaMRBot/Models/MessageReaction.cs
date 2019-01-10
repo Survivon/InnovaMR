@@ -12,6 +12,15 @@ namespace InnovaMRBot.Models
 
         public string UserId { get; set; }
 
+        public string Type { get; set; }
+
+        [NotMapped]
+        public ReactionType ReactionType
+        {
+            get => Type.Equals(ReactionType.DisLike.ToString()) ? ReactionType.DisLike : ReactionType.Like;
+            set { Type = value.ToString(); }
+        }
+
         [NotMapped]
         public User User { get; set; }
 
@@ -23,7 +32,7 @@ namespace InnovaMRBot.Models
 
         public MessageReaction SetReactionInMinutes(DateTimeOffset publishDate)
         {
-            var reaction = (int) ReactionTime.Subtract(publishDate).TotalMinutes;
+            var reaction = (int)ReactionTime.Subtract(publishDate).TotalMinutes;
             ReactionInMinutes = reaction == 0 ? 1 : reaction;
             return this;
         }
