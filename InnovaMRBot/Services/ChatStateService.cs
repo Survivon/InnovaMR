@@ -145,7 +145,8 @@ namespace InnovaMRBot.Services
 <i>/get stat getmrreaction</i> command for get reaction on ticket
 <i>/get stat getusermrreaction</i> command for get user reaction on tickets
 <i>/get stat getunmarked</i> command for get count of unmarked MR per days
-For all of this statistics you can add start and end date of publish date(For ex. <b>/get stat getalldata 24/11/2018 28/11/2018</b>)",
+For all of this statistics you can add start and end date of publish date(For ex. <b>/get stat getalldata 24/11/2018 28/11/2018</b>)
+🚫 - mark MR that it has some conflicts or bad code, after mark please send message to MRs owner",
                         ChatId = update.Message.Chat.Id.ToString(),
                         FormattingMessageType = FormattingMessageType.HTML,
                     });
@@ -245,7 +246,6 @@ For all of this statistics you can add start and end date of publish date(For ex
 
         private async Task GetMergeStatAsync(Update update)
         {
-            var userId = update.CallbackQuery.Sender.Id.ToString();
             var messageId = update.CallbackQuery.Message.Id.ToString();
 
             var conversations = _dbContext.Conversations.GetAll();
@@ -254,19 +254,7 @@ For all of this statistics you can add start and end date of publish date(For ex
             if (conversation == null) return;
 
             var users = _dbContext.Users.GetAll().ToList();
-            var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
-            if (needUser == null)
-            {
-                var savedUser = new User()
-                {
-                    Name = GetUserFullName(update.CallbackQuery.Sender),
-                    UserId = userId,
-                };
-
-                AddOrUpdateUser(savedUser);
-
-                needUser = savedUser;
-            }
+            SaveIfNeedUser(update.CallbackQuery.Sender);
 
             var needMr = conversation.ListOfMerge.FirstOrDefault(m => m.TelegramMessageId.Equals(messageId));
             if (needMr != null)
@@ -356,19 +344,7 @@ For all of this statistics you can add start and end date of publish date(For ex
 
             var userId = update.CallbackQuery.Sender.Id.ToString();
             var users = _dbContext.Users.GetAll();
-            var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
-            if (needUser == null)
-            {
-                var savedUser = new User()
-                {
-                    Name = GetUserFullName(update.CallbackQuery.Sender),
-                    UserId = userId,
-                };
-
-                AddOrUpdateUser(savedUser);
-
-                needUser = savedUser;
-            }
+            var needUser = SaveIfNeedUser(update.CallbackQuery.Sender);
 
             if (needMr != null)
             {
@@ -393,7 +369,8 @@ For all of this statistics you can add start and end date of publish date(For ex
                         needMr.Reactions.Count(c => c.ReactionType == ReactionType.DisLike));
 
                     returnedMessage.ChatId = conversation.MRChat.Id;
-                    returnedMessage.Text = $"{needMr.Description} \nby {needUser.Name}";
+                    
+                    returnedMessage.Text = $"{needMr.Description} \nby {users.FirstOrDefault(c => c.UserId.Equals(needMr.OwnerId)).Name}";
                     returnedMessage.EditMessageId = messageId;
 
                     _telegramService.EditMessageAsync(returnedMessage).ConfigureAwait(false);
@@ -603,19 +580,7 @@ For all of this statistics you can add start and end date of publish date(For ex
 
             var userId = update.CallbackQuery.Sender.Id.ToString();
             var users = _dbContext.Users.GetAll();
-            var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
-            if (needUser == null)
-            {
-                var savedUser = new User()
-                {
-                    Name = GetUserFullName(update.CallbackQuery.Sender),
-                    UserId = userId,
-                };
-
-                AddOrUpdateUser(savedUser);
-
-                needUser = savedUser;
-            }
+            var needUser = SaveIfNeedUser(update.CallbackQuery.Sender);
 
             if (needMr != null)
             {
@@ -640,7 +605,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                         needMr.Reactions.Count(c => c.ReactionType == ReactionType.DisLike));
 
                     returnedMessage.ChatId = conversation.MRChat.Id;
-                    returnedMessage.Text = $"{needMr.Description} \nby {needUser.Name}";
+                    returnedMessage.Text = $"{needMr.Description} \nby {users.FirstOrDefault(c => c.UserId.Equals(needMr.OwnerId)).Name}";
                     returnedMessage.EditMessageId = messageId;
 
                     await _telegramService.EditMessageAsync(returnedMessage);
@@ -655,12 +620,7 @@ For all of this statistics you can add start and end date of publish date(For ex
 
                 if (needMr.OwnerId.Equals(needUser.UserId))
                 {
-                    await _telegramService.SendCallbackAnswerAsync(new AnswerCallbackQueryRequest()
-                    {
-                        IsNeedShowAlert = true,
-                        Text = "You couldn't mark your MR 😊",
-                        CallbackId = update.CallbackQuery.Id,
-                    });
+                    GetMergeStatAsync(update).ConfigureAwait(false);
 
                     return;
                 }
@@ -676,6 +636,8 @@ For all of this statistics you can add start and end date of publish date(For ex
 
                 needMr.Reactions.Add(reaction);
 
+                needMr.Reactions.RemoveAll(r => r.ReactionType == ReactionType.DisLike && r.UserId == needUser.UserId);
+
                 AddButtonForRequest(
                     returnedMessage,
                     needMr.MrUrl,
@@ -689,6 +651,44 @@ For all of this statistics you can add start and end date of publish date(For ex
 
                 await _telegramService.EditMessageAsync(returnedMessage);
                 _dbContext.Conversations.Update(conversation);
+
+                if (needMr.Reactions.Count(r => r.ReactionType == ReactionType.Like) == 2)
+                {
+                    if (needMr.Owner == null)
+                    {
+                        needMr.Owner = users.FirstOrDefault(u => u.UserId.Equals(needMr.OwnerId));
+                    }
+
+                    var chatWithMrsUser = needMr.Owner.ChatId;
+                    if (!string.IsNullOrEmpty(chatWithMrsUser))
+                    {
+                        var requestMessage = new SendMessageRequest()
+                        {
+                            ChatId = chatWithMrsUser,
+                            Text =
+                                $"Yor MR {new Regex(MR_REMOVE_PATTERN).Replace(needMr.MrUrl, string.Empty)} is get 2 likes. Please, remove WIP status 😊",
+                            FormattingMessageType = FormattingMessageType.Markdown,
+                            ReplyMarkup = new InlineKeyboardMarkup()
+                            {
+                                InlineKeyboardButtons = new List<List<InlineKeyboardButton>>()
+                                {
+                                    new List<InlineKeyboardButton>()
+                                    {
+                                        new InlineKeyboardButton()
+                                        {
+                                            Text = "MR link",
+                                            Url = needMr.MrUrl,
+                                        },
+                                    },
+                                },
+                            },
+                        };
+
+                        AddUsersButtonToAnswer(requestMessage);
+
+                        _telegramService.SendMessageAsync(requestMessage).ConfigureAwait(false);
+                    }
+                }
             }
             else
             {
@@ -713,6 +713,8 @@ For all of this statistics you can add start and end date of publish date(For ex
                             CallbackId = update.CallbackQuery.Id,
                         });
 
+                        versionOffMr.Reactions.RemoveAll(r => r.ReactionType == ReactionType.DisLike && r.UserId == needUser.UserId);
+
                         AddButtonForRequest(
                             returnedMessage,
                             versionedMr.MrUrl,
@@ -736,13 +738,7 @@ For all of this statistics you can add start and end date of publish date(For ex
 
                     if (versionedMr.OwnerId.Equals(needUser.UserId))
                     {
-                        await _telegramService.SendCallbackAnswerAsync(new AnswerCallbackQueryRequest()
-                        {
-                            IsNeedShowAlert = true,
-                            Text = "You couldn't mark your MR 😊",
-                            CallbackId = update.CallbackQuery.Id,
-                        });
-
+                        GetMergeStatAsync(update).ConfigureAwait(false);
                         return;
                     }
 
@@ -770,6 +766,44 @@ For all of this statistics you can add start and end date of publish date(For ex
 
                     await _telegramService.EditMessageAsync(returnedMessage);
                     _dbContext.Conversations.Update(conversation);
+
+                    if (versionOffMr.Reactions.Count(r => r.ReactionType == ReactionType.Like) == 2)
+                    {
+                        if (versionedMr.Owner == null)
+                        {
+                            versionedMr.Owner = users.FirstOrDefault(u => u.UserId.Equals(needMr.OwnerId));
+                        }
+
+                        var chatWithMrsUser = needMr.Owner.ChatId;
+                        if (!string.IsNullOrEmpty(chatWithMrsUser))
+                        {
+                            var requestMessage = new SendMessageRequest()
+                            {
+                                ChatId = chatWithMrsUser,
+                                Text =
+                                    $"Yor MR {new Regex(MR_REMOVE_PATTERN).Replace(versionedMr.MrUrl, string.Empty)} is get 2 likes. Please, remove WIP status 😊",
+                                FormattingMessageType = FormattingMessageType.Markdown,
+                                ReplyMarkup = new InlineKeyboardMarkup()
+                                {
+                                    InlineKeyboardButtons = new List<List<InlineKeyboardButton>>()
+                                    {
+                                        new List<InlineKeyboardButton>()
+                                        {
+                                            new InlineKeyboardButton()
+                                            {
+                                                Text = "MR link",
+                                                Url = versionedMr.MrUrl,
+                                            },
+                                        },
+                                    },
+                                },
+                            };
+
+                            AddUsersButtonToAnswer(requestMessage);
+
+                            _telegramService.SendMessageAsync(requestMessage).ConfigureAwait(false);
+                        }
+                    }
                 }
             }
 
@@ -845,24 +879,12 @@ For all of this statistics you can add start and end date of publish date(For ex
         private async Task<SendMessageRequest> RemoveMrConversationAsync(Update message)
         {
             var convesationId = message.ChanelMessage.Chat.Id.ToString();
-            var userId = message.ChanelMessage.ForwardSender.Id.ToString();
             var responseMessage = new SendMessageRequest()
             {
                 ChatId = convesationId,
             };
 
-            var users = _dbContext.Users.GetAll();
-            var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
-            if (needUser == null)
-            {
-                var savedUser = new User()
-                {
-                    Name = GetUserFullName(message.Message.ForwardSender),
-                    UserId = message.ChanelMessage.ForwardSender.Id.ToString(),
-                };
-
-                AddOrUpdateUser(savedUser);
-            }
+            SaveIfNeedUser(message.ChanelMessage.ForwardSender);
 
             var conversations = _dbContext.Conversations.GetAll();
 
@@ -892,7 +914,6 @@ For all of this statistics you can add start and end date of publish date(For ex
         private async Task GetMRMessageAsync(Update message)
         {
             var convesationId = message.Message.Chat.Id.ToString();
-            var userId = message.Message.Sender.Id.ToString();
 
             var responseMessage = new SendMessageRequest()
             {
@@ -938,26 +959,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                 return;
             }
 
-            var users = _dbContext.Users.GetAll();
-            var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
-            if (needUser == null)
-            {
-                var savedUser = new User()
-                {
-                    Name = GetUserFullName(message.Message.Sender),
-                    UserId = userId,
-                    ChatId = convesationId,
-                };
-
-                AddOrUpdateUser(savedUser);
-
-                needUser = savedUser;
-            }
-            else if (string.IsNullOrEmpty(needUser.ChatId))
-            {
-                needUser.ChatId = convesationId;
-                AddOrUpdateUser(needUser);
-            }
+            var needUser = SaveIfNeedUser(message.Message.Sender);
 
             if (await IsMrContainceAsync(mrUrl, conversation.MRChat.Id))
             {
@@ -1136,6 +1138,8 @@ For all of this statistics you can add start and end date of publish date(For ex
                 endDate = new DateTimeOffset(Convert.ToDateTime(components[2]));
             }
 
+            SaveIfNeedUser(update.Message.Sender);
+
             var result = string.Empty;
             var conversations = _dbContext.Conversations.GetAll();
             var conversation = conversations.FirstOrDefault();
@@ -1172,566 +1176,7 @@ For all of this statistics you can add start and end date of publish date(For ex
         }
 
         #endregion
-
-        //#region Skype part
-
-        //public async Task<Activity> ReturnMessage(ITurnContext turnContext)
-        //{
-        //    var returnMessage = new Activity();
-
-        //    if (turnContext.Activity.Type == ActivityTypes.Message)
-        //    {
-        //        var message = turnContext.Activity.Text;
-
-        //        //if (message.Equals(MARK_MR_CONVERSATION))
-        //        //{
-        //        //    return await SetupMRConversationAsync(turnContext);
-        //        //}
-        //        //else if (new Regex(GUID_PATTERN).IsMatch(message) && message.StartsWith($"{MARK_ALERT_CONVERSATION}"))
-        //        //{
-        //        //    if (Guid.TryParse(new Regex(GUID_PATTERN).Match(message).Value, out var syncId))
-        //        //        return await SetupAlertConversationAsync(turnContext, syncId);
-        //        //    else return turnContext.Activity.CreateReply();
-        //        //}
-        //        //else if (message.Equals(REMOVE_MR_CONVERSATION))
-        //        //{
-        //        //    return await RemoveMrConversationAsync(turnContext);
-        //        //}
-        //        //else
-        //        if (message.Equals(REMOVE_ALERT_CONVERSATION))
-        //        {
-        //            return await RemoveAlertConversationAsync(turnContext);
-        //        }
-        //        //else if (message.Equals(SETUP_ADMIN))
-        //        //{
-        //        //    return await AddAdminAsync(turnContext);
-        //        //}
-        //        //else if (message.Equals(REMOVE_ADMIN))
-        //        //{
-        //        //    return await RemoveAdminAsync(turnContext);
-        //        //}
-        //        //else if (message.StartsWith(GET_STATISTIC))
-        //        //{
-        //        //    return await GetStatisticsAsync(turnContext);
-        //        //}
-        //        //else if (message.Equals(GET_UNMARKED_MR))
-        //        //{
-        //        //    return await GetUnMarkedMergeRequestAsync(turnContext);
-        //        //}
-        //        //else if (message.Equals(GET_MY_UNMARKED_MR))
-        //        //{
-        //        //    return await GetMyUnMarkedMergeRequestAsync(turnContext);
-        //        //}
-        //        //else
-        //        //{
-        //        //    return await GetMrMessageAsync(turnContext);
-        //        //}
-        //    }
-        //    else if (turnContext.Activity.Type == ActivityTypes.MessageReaction)
-        //    {
-        //        //
-        //    }
-
-        //    return returnMessage;
-        //}
-
-        //////TODO: update method
-        ////private async Task SetReactionForMessage(ITurnContext context)
-        ////{
-        ////    var reactions = context.Activity.ReactionsAdded.ToList();
-        ////    var users = await GetUsersAsync();
-        ////    var needUser = users.Users.FirstOrDefault(u => u.UserId.Equals(context.Activity.From.Id));
-
-        ////    if (needUser == null)
-        ////    {
-        ////        var savedUser = new User()
-        ////        {
-        ////            Name = context.Activity.From.Name,
-        ////            UserId = context.Activity.From.Id,
-        ////        };
-
-        ////        await AddOrUpdateUserAsync(savedUser);
-
-        ////        needUser = savedUser;
-        ////    }
-
-        ////    var messageId = context.Activity.ReplyToId;
-
-        ////    foreach (var messageReaction in reactions)
-        ////    {
-        ////        var type = messageReaction.Type;
-        ////    }
-        ////}
-
-        //#region Conversation setup
-
-        //private async Task<Activity> RemoveAlertConversationAsync(ITurnContext context)
-        //{
-        //    var convesationId = context.Activity.Conversation.Id;
-        //    var userId = context.Activity.From.Id;
-        //    var responseMessage = context.Activity.CreateReply();
-        //    responseMessage.TextFormat = "plain";
-
-        //    var users = _dbContext.Users.GetAll();
-        //    var needUser = users.FirstOrDefault(u => u.UserId.Equals(userId));
-        //    if (needUser == null)
-        //    {
-        //        var savedUser = new User()
-        //        {
-        //            Name = context.Activity.From.Name,
-        //            UserId = context.Activity.From.Id,
-        //        };
-
-        //        AddOrUpdateUser(savedUser);
-        //    }
-
-        //    var conversations = _dbContext.Conversations.GetAll();
-        //    //var needConversation = conversations.FirstOrDefault(c => c.AlertChat.Id.Equals(convesationId));
-        //    //if (needConversation == null)
-        //    //{
-        //    //    responseMessage.Text =
-        //    //        "This is not a Alert conversation or you don't add any conversation. Try in Alert conversation ;)";
-        //    //}
-        //    //else
-        //    //{
-        //    //    //if (needConversation.Admins.Any(u => u.UserId.Equals(userId)))
-        //    //    //{
-        //    //    //    responseMessage.Text = $"Congratulation, you remove alert conversation. Please setup alert conversation by sync id: {needConversation.MRChat.SyncId}";
-
-        //    //    //    needConversation.AlertChat = null;
-        //    //    //    await UpdateConversationAsync(needConversation);
-        //    //    //}
-        //    //    //else
-        //    //    //{
-        //    //    //    responseMessage.Text = "You don't have permission for remove this conversation!";
-        //    //    //}
-        //    //}
-
-        //    return responseMessage;
-        //}
-
-        ////private async Task<Activity> RemoveMrConversationAsync(ITurnContext context)
-        ////{
-        ////    var convesationId = context.Activity.Conversation.Id;
-        ////    var userId = context.Activity.From.Id;
-        ////    var responseMessage = context.Activity.CreateReply();
-        ////    responseMessage.TextFormat = "plain";
-
-        ////    var users = await GetUsersAsync();
-        ////    var needUser = users.Users.FirstOrDefault(u => u.UserId.Equals(userId));
-        ////    if (needUser == null)
-        ////    {
-        ////        var savedUser = new User()
-        ////        {
-        ////            Name = context.Activity.From.Name,
-        ////            UserId = context.Activity.From.Id,
-        ////        };
-
-        ////        await AddOrUpdateUserAsync(savedUser);
-        ////    }
-
-        ////    var conversations = await GetCurrentConversationsAsync();
-
-        ////    var needConversation = conversations.BotConversation.FirstOrDefault(c => c.MRChat.Id.Equals(convesationId));
-        ////    if (needConversation == null)
-        ////    {
-        ////        responseMessage.Text =
-        ////            "This is not a MR's conversation or you don't add any conversation. Try in MR's conversation ;)";
-        ////    }
-        ////    else
-        ////    {
-        ////        if (needConversation.Admins.Any(u => u.UserId.Equals(userId)))
-        ////        {
-        ////            responseMessage.Text = "Congratulation, you remove all data with linked for current conversation";
-        ////            // TODO: add get stat and send before remove
-        ////            await RemoveConversationAsync(needConversation);
-        ////        }
-        ////        else
-        ////        {
-        ////            responseMessage.Text = "You don't have permission for remove this conversation!";
-        ////        }
-        ////    }
-
-        ////    return responseMessage;
-        ////}
-
-        ////private async Task<Activity> SetupMRConversationAsync(ITurnContext context)
-        ////{
-        ////    var conversationId = context.Activity.Conversation.Id;
-
-        ////    var resultMessage = context.Activity.CreateReply();
-
-        ////    var conversations = await GetCurrentConversationsAsync();
-
-        ////    if (!conversations.BotConversation.Any())
-        ////    {
-        ////        var syncId = Guid.NewGuid();
-        ////        var chatSetting = new ChatSetting()
-        ////        {
-        ////            Id = conversationId,
-        ////            IsMRChat = true,
-        ////            SyncId = syncId,
-        ////            Name = context.Activity.Conversation.Name,
-        ////            BaseActivity = context.Activity,
-        ////        };
-
-        ////        var newConversation = new ConversationSetting()
-        ////        {
-        ////            MRChat = chatSetting,
-        ////        };
-
-        ////        await SaveConversationAsync(newConversation);
-
-        ////        resultMessage.Text = $"Current chat is setup as MR with sync id: {syncId}";
-        ////    }
-
-        ////    return resultMessage;
-        ////}
-
-        //private async Task<Activity> SetupAlertConversationAsync(ITurnContext context, Guid syncId)
-        //{
-        //    var conversationId = context.Activity.Conversation.Id;
-        //    var responseMessage = context.Activity.CreateReply();
-        //    responseMessage.TextFormat = "plain";
-
-        //    var conversations = _dbContext.Conversations.GetAll();
-
-        //    if (!conversations.Any())
-        //    {
-        //        responseMessage.Text = "Have not setup any conversation to Bot 😊";
-        //    }
-        //    else
-        //    {
-        //        var neededConversation =
-        //            conversations.FirstOrDefault(c => c.MRChat.SyncId.Equals(syncId));
-        //        if (neededConversation == null)
-        //        {
-        //            responseMessage.Text = $"Didn't setup MR chat for current sync id: {syncId}";
-        //        }
-        //        else
-        //        {
-        //            //neededConversation.AlertChat = new ChatSetting()
-        //            //{
-        //            //    Id = conversationId,
-        //            //    IsAlertChat = true,
-        //            //    SyncId = syncId,
-        //            //    Name = context.Activity.Conversation.Name,
-        //            //};
-
-        //            //_dbContext.Conversations.Update(neededConversation);
-        //            responseMessage.Text = $"This chat is setup as alert chat for conversation {neededConversation.MRChat.Name}";
-        //        }
-        //    }
-
-        //    return responseMessage;
-        //}
-
-        ////private async Task<Activity> AddAdminAsync(ITurnContext context)
-        ////{
-        ////    var responseMessage = new Activity();
-
-        ////    responseMessage = await GetMessageWithCheckChatAsync(
-        ////        async (conversation) =>
-        ////    {
-        ////        if (conversation.Admins.Count >= MAX_COUNT_OF_ADMINS)
-        ////        {
-        ////            return "Admin list for current conversation is full";
-        ////        }
-        ////        else
-        ////        {
-        ////            var users = await GetUsersAsync();
-        ////            var needUser = users.Users.FirstOrDefault(u => u.UserId.Equals(context.Activity.From.Id));
-        ////            if (needUser == null)
-        ////            {
-        ////                var savedUser = new User()
-        ////                {
-        ////                    Name = context.Activity.From.Name,
-        ////                    UserId = context.Activity.From.Id,
-        ////                };
-
-        ////                await AddOrUpdateUserAsync(savedUser);
-
-        ////                needUser = savedUser;
-        ////            }
-
-        ////            conversation.Admins.Add(needUser);
-
-        ////            await SaveConversationAsync(conversation);
-
-        ////            return $"{needUser.Name} add like admin";
-        ////        }
-        ////    }, context);
-
-        ////    return responseMessage;
-        ////}
-
-        ////private async Task<Activity> RemoveAdminAsync(ITurnContext context)
-        ////{
-        ////    var responseMessage = new Activity();
-
-        ////    responseMessage = await GetMessageWithCheckChatAsync(
-        ////        async (conversation) =>
-        ////        {
-        ////            var users = await GetUsersAsync();
-        ////            var needUser = users.Users.FirstOrDefault(u => u.UserId.Equals(context.Activity.From.Id));
-        ////            if (needUser == null)
-        ////            {
-        ////                var savedUser = new User()
-        ////                {
-        ////                    Name = context.Activity.From.Name,
-        ////                    UserId = context.Activity.From.Id,
-        ////                };
-
-        ////                await AddOrUpdateUserAsync(savedUser);
-
-        ////                needUser = savedUser;
-        ////            }
-
-        ////            if (conversation.Admins.Any(u => u.UserId.Equals(needUser.UserId)))
-        ////            {
-        ////                conversation.Admins.RemoveAll(u => u.UserId.Equals(needUser.UserId));
-        ////                return "You have been removed from admin of current conversation";
-        ////            }
-
-        ////            return $"Good joke xD You are admin of chat. Try next time ;)";
-        ////        }, context);
-
-        ////    return responseMessage;
-        ////}
-
-        //#endregion
-
-        //#region Merge Requst
-
-        ////        private async Task<Activity> GetMrMessageAsync(ITurnContext context)
-        ////        {
-        ////            var userId = context.Activity.From.Id;
-        ////            var responseMessage = context.Activity.CreateReply(string.Empty);
-        ////            responseMessage.TextFormat = "plain";
-
-        ////            var messageText = context.Activity.Text;
-
-        ////            var mrRegex = new Regex(MR_PATTERN);
-        ////            var mrUrlMatch = mrRegex.Match(messageText);
-        ////            var mrUrl = mrUrlMatch.Value;
-
-        ////            var conversation = await GetConversationByIdAsync(context.Activity.Conversation.Id);
-
-        ////            if (await IsMrContainceAsync(mrUrl, context.Activity.Conversation.Id))
-        ////            {
-        ////                // for updatedTicket
-        ////                var needMr = conversation.ListOfMerge.FirstOrDefault(m => m.MrUrl.Equals(mrUrl));
-        ////                if (needMr == null)
-        ////                {
-        ////                    return responseMessage;
-        ////                }
-
-        ////                needMr.IsHadAlreadyChange = true;
-        ////                needMr.CountOfChange++;
-
-        ////                needMr.VersionedSetting.Add(new VersionedMergeRequest()
-        ////                {
-        ////                    OwnerMergeId = needMr.Id,
-        ////                    PublishDate = context.Activity.Timestamp ?? DateTimeOffset.UtcNow,
-        ////                    Id = context.Activity.Id,
-        ////                });
-
-        ////                await SaveConversationAsync(conversation);
-        ////            }
-        ////            else
-        ////            {
-        ////                var users = await GetUsersAsync();
-        ////                var needUser = users.Users?.FirstOrDefault(u => u.UserId.Equals(userId));
-        ////                if (needUser == null)
-        ////                {
-        ////                    var savedUser = new User()
-        ////                    {
-        ////                        Name = context.Activity.From.Name,
-        ////                        UserId = userId,
-        ////                    };
-
-        ////                    await AddOrUpdateUserAsync(savedUser);
-
-        ////                    needUser = savedUser;
-        ////                }
-
-        ////                var mrMessage = new MergeSetting { MrUrl = mrUrl };
-
-        ////                var ticketRegex = new Regex(TICKET_PATTERN);
-
-        ////                var ticketMatches = ticketRegex.Matches(messageText);
-
-        ////                var description = messageText.Replace(mrUrl, string.Empty);
-
-        ////                foreach (Match ticketMatch in ticketMatches)
-        ////                {
-        ////                    mrMessage.TicketsUrl.Add(ticketMatch.Value);
-        ////                    description = description.Replace(ticketMatch.Value, string.Empty);
-        ////                }
-
-        ////                mrMessage.PublishDate = context.Activity.Timestamp ?? DateTimeOffset.UtcNow;
-        ////                mrMessage.Id = context.Activity.Id;
-
-        ////                var lineOfMessage = description.Split('\r').ToList();
-        ////                var firstLine = lineOfMessage.FirstOrDefault();
-
-        ////                if (_changesNotation.Any(c => c.Equals(firstLine, StringComparison.InvariantCultureIgnoreCase)))
-        ////                {
-        ////                    lineOfMessage.RemoveAt(0);
-        ////                    description = string.Join('\r', lineOfMessage);
-        ////                }
-
-        ////                mrMessage.Description = description.Trim(new char[] { '\r', '\n' });
-        ////                mrMessage.Owner = needUser;
-
-        ////                conversation.ListOfMerge.Add(mrMessage);
-
-        ////                await SaveConversationAsync(conversation);
-        ////            }
-
-        ////            return responseMessage;
-        ////        }
-
-        ////        private async Task<Activity> GetUnMarkedMergeRequestAsync(ITurnContext context)
-        ////        {
-        ////            var responseMessages = await GetMessageWithCheckChatAsync(
-        ////                async (conversation) =>
-        ////                {
-        ////                    var mrs = conversation.ListOfMerge.Where(m => m.Reactions.Count < 2).ToList();
-
-        ////                    if (!mrs.Any())
-        ////                    {
-        ////                        return "Good job guys, you don't have any merge request which must be reviewed 😊";
-        ////                    }
-
-        ////                    var builder = new StringBuilder();
-
-        ////                    builder.Append($@"---------------------------
-
-        ////You have {mrs.Count} unchecked merge requests
-        ////");
-
-        ////                    foreach (var mergeSetting in mrs)
-        ////                    {
-        ////                        builder.Append($@"\t- {mergeSetting.Owner.Name} publish MR with link {mergeSetting.MrUrl}
-        ////");
-        ////                    }
-
-        ////                    builder.Append(@"
-        ////Thanks 😊 
-        ////---------------------------");
-
-        ////                    return builder.ToString();
-        ////                }, context);
-
-
-        ////            return responseMessages;
-        ////        }
-
-        ////        private async Task<Activity> GetMyUnMarkedMergeRequestAsync(ITurnContext context)
-        ////        {
-        ////            var userId = context.Activity.From.Id;
-
-        ////            var responseMessages = await GetMessageWithCheckChatAsync(
-        ////                async (conversation) =>
-        ////                {
-        ////                    var mrs = conversation.ListOfMerge.Where(m => m.Reactions.Count < 2 && m.Owner.UserId.Equals(userId)).ToList();
-
-        ////                    if (!mrs.Any())
-        ////                    {
-        ////                        return "Good job, you don't have any merge request which must be reviewed 😊";
-        ////                    }
-
-        ////                    var builder = new StringBuilder();
-
-        ////                    builder.Append($@"---------------------------
-
-        ////You have {mrs.Count} unchecked merge requests
-        ////");
-
-        ////                    foreach (var mergeSetting in mrs)
-        ////                    {
-        ////                        builder.Append($@"\t- {mergeSetting.Owner.Name} publish MR with link {mergeSetting.MrUrl}
-        ////");
-        ////                    }
-
-        ////                    builder.Append(@"
-        ////Thanks 😊 
-        ////---------------------------");
-
-        ////                    return builder.ToString();
-        ////                }, context);
-
-
-        ////            return responseMessages;
-        ////        }
-
-        //#endregion
-
-        //#region Stats
-
-        ////private async Task<Activity> GetStatisticsAsync(ITurnContext context)
-        ////{
-        ////    var responseMessage = await GetMessageWithCheckChatAsync(
-        ////        async (conversation) =>
-        ////        {
-        ////            var message = context.Activity.Text;
-        ////            message = message.Replace(GET_STATISTIC, string.Empty);
-        ////            var components = message.Split(' ');
-        ////            var command = components[0];
-        ////            var startDate = default(DateTimeOffset);
-        ////            if (components.Length > 1)
-        ////            {
-        ////                startDate = new DateTimeOffset(Convert.ToDateTime(components[1]));
-        ////            }
-
-        ////            var endDate = default(DateTimeOffset);
-        ////            if (components.Length > 2)
-        ////            {
-        ////                endDate = new DateTimeOffset(Convert.ToDateTime(components[2]));
-        ////            }
-
-        ////            var result = new ResponseMessage();
-
-        ////            switch (command)
-        ////            {
-        ////                case "getalldata":
-        ////                    result = StatHtmlBuilder.GetAllData(conversation.ListOfMerge, startDate, endDate);
-        ////                    break;
-        ////                case "getmrreaction":
-        ////                    result = StatHtmlBuilder.GetMRReaction(conversation.ListOfMerge, startDate, endDate);
-        ////                    break;
-        ////                case "getusermrreaction":
-        ////                    result = StatHtmlBuilder.GetUsersMRReaction(conversation.ListOfMerge, startDate, endDate);
-        ////                    break;
-        ////                case "getunmarked":
-        ////                    result = StatHtmlBuilder.GetUnmarkedCountMergePerDay(conversation.ListOfMerge, startDate,
-        ////                        endDate);
-        ////                    break;
-        ////            }
-
-        ////            return result.Message;
-        ////        }, context);
-
-        ////    responseMessage.TextFormat = "plain";
-
-        ////    responseMessage.Attachments = new List<Attachment>()
-        ////    {
-        ////        new Attachment()
-        ////        {
-        ////            Name = "Stat",
-        ////            ContentUrl = responseMessage.Text,
-        ////            ContentType = DownloadController.GetContentType(responseMessage.Text),
-        ////        },
-        ////    };
-
-        ////    return responseMessage;
-        ////}
-
-        //#endregion
-
-        //#endregion
-
+        
         #region Helpers
 
         private async Task<bool> IsMrContainceAsync(string mrUrl, string chatId)
@@ -1785,6 +1230,26 @@ For all of this statistics you can add start and end date of publish date(For ex
         private void AddUsersButtonToAnswer(BaseRequest message)
         {
             message.ReplyMarkup = GetKeyboardForDefaultMessage();
+        }
+
+        private User SaveIfNeedUser(TelegramBotApi.Models.User user)
+        {
+            var users = _dbContext.Users.GetAll();
+            var needUser = users.FirstOrDefault(u => u.UserId.Equals(user.Id.ToString()));
+            if (needUser == null)
+            {
+                var savedUser = new User()
+                {
+                    Name = GetUserFullName(user),
+                    UserId = user.Id.ToString(),
+                };
+
+                AddOrUpdateUser(savedUser);
+
+                needUser = savedUser;
+            }
+
+            return needUser;
         }
 
         private IKeyboard GetKeyboardForDefaultMessage()
@@ -1881,6 +1346,5 @@ For all of this statistics you can add start and end date of publish date(For ex
         }
 
         #endregion
-
     }
 }
