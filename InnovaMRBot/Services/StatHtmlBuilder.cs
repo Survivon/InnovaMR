@@ -33,8 +33,7 @@ namespace InnovaMRBot.Services
                 groupedMerges = merge.Where(m => m.PublishDate < end && m.PublishDate > start)
                     .GroupBy(m => m.Owner.Name);
             }
-
-
+            
             resultTable.Append("<table style=\"width: 100 % \">" +
                                "<tr><th>MR Owner</th>" +
                                "<th>MR Link</th>" +
@@ -295,6 +294,51 @@ namespace InnovaMRBot.Services
             var allHtml = HEADER_HTML_PATTERN.Replace("{0}", resultMessage);
 
             var fileUrl = GetFileName(allHtml, "unmarkedmrperday");
+
+            return fileUrl;
+        }
+
+
+        public static string GetUnmarkedMergePerUser(List<MergeSetting> merge, List<User> usersList,
+            DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        {
+            IEnumerable<IGrouping<string, MergeSetting>> groupedMerges;
+
+            MapUsers(merge, usersList);
+
+            var resultTable = new StringBuilder();
+            if (start == default(DateTimeOffset) || end == default(DateTimeOffset))
+            {
+                groupedMerges = merge.GroupBy(m => m.Owner.Name);
+            }
+            else
+            {
+                resultTable.Append($"<h2>Stat from {start:MM/dd/yy} to {end:MM/dd/yy}</h2>");
+                groupedMerges = merge.Where(m => m.PublishDate < end && m.PublishDate > start)
+                    .GroupBy(m => m.Owner.Name);
+            }
+
+            resultTable.Append("<table style=\"width: 100 % \"><tr><th>User</th><th>Unmarked MRs</th></tr>");
+
+            foreach (var groupedMerge in groupedMerges.OrderBy(c => c.Key))
+            {
+                foreach (var mergeSetting in groupedMerge)
+                {
+                    var lastVersion = GetLastVersion(mergeSetting);
+
+                    if (lastVersion.Reactions.Count(c => c.ReactionType == ReactionType.Like) >= 2) continue;
+
+                    resultTable.Append($"<tr><td>{groupedMerge.Key}</td><td><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td></tr>");
+                }
+            }
+            
+            resultTable.Append("</table>");
+
+            var resultMessage = resultTable.ToString();
+
+            var allHtml = HEADER_HTML_PATTERN.Replace("{0}", resultMessage);
+
+            var fileUrl = GetFileName(allHtml, "unmarkedmrperuser");
 
             return fileUrl;
         }

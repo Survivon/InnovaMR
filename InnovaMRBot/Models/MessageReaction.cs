@@ -18,7 +18,7 @@ namespace InnovaMRBot.Models
         public ReactionType ReactionType
         {
             get => Type.Equals(ReactionType.DisLike.ToString()) ? ReactionType.DisLike : ReactionType.Like;
-            set { Type = value.ToString(); }
+            set => Type = value.ToString();
         }
 
         [NotMapped]

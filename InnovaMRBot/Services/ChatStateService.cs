@@ -4,6 +4,7 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -72,6 +73,8 @@ namespace InnovaMRBot.Services
 
         private const string COMMON_DOCUMENT = @"/getcommondocument";
 
+        private const string SPRINT_WORKER = @"/sprint";
+
         private object _lockerSaveToDbObject = new object();
 
         private readonly List<string> _changesNotation = new List<string>()
@@ -113,24 +116,6 @@ namespace InnovaMRBot.Services
                     {
                         ChatId = update.Message.Chat.Id.ToString(),
                         Text = $"Hi, {savedUser.Name}! I'm Bot for help to work with MR for Innova 😊 If you have some question please send me /help or visit site http://innovamrbot.azurewebsites.net/",
-                        ReplyMarkup = new ReplyKeyboardMarkup()
-                        {
-                            IsHideKeyboardAfterClick = true,
-                            Keyboard = new List<List<KeyboardButton>>()
-                            {
-                                new List<KeyboardButton>()
-                                {
-                                    new KeyboardButton()
-                                    {
-                                        Text = HELP,
-                                    },
-                                    new KeyboardButton()
-                                    {
-                                        Text = COMMON_DOCUMENT,
-                                    },
-                                },
-                            },
-                        },
                     });
                 }
                 else if (message.Equals(HELP))
@@ -178,6 +163,10 @@ For all of this statistics you can add start and end date of publish date(For ex
                 {
                     // get statistic
                     GetStatisticsAsync(update).ConfigureAwait(false);
+                }
+                else if (message.StartsWith(SPRINT_WORKER, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    SprintWorkAsync(update).ConfigureAwait(false);
                 }
                 else
                 {
@@ -243,6 +232,124 @@ For all of this statistics you can add start and end date of publish date(For ex
         }
 
         #region Telegram part
+
+        private async Task SprintWorkAsync(Update update)
+        {
+            var message = update.Message.Text;
+            var responseMessage = string.Empty;
+
+            message = message.Replace(SPRINT_WORKER, string.Empty).Trim(' ');
+
+            var keywords = message.Split(' ');
+
+            if (keywords.Length > 1)
+            {
+                var conversations = _dbContext.Conversations.GetAll();
+                var conversation = conversations.FirstOrDefault(c => c.MRChat != null);
+
+                var sprints = conversation.MRChat.Sprints;
+                var number = Convert.ToInt32(keywords[1]);
+
+                switch (keywords[0])
+                {
+                    case "add":
+                        if (sprints == null) sprints = new List<Sprint>();
+                        
+                        if (keywords.Length > 3)
+                        {
+                            try
+                            {
+                                var start = ConvertToDate(keywords[2]);
+                                var end = ConvertToDate(keywords[3]);
+
+                                sprints.Add(new Sprint()
+                                {
+                                    End = end,
+                                    Number = number,
+                                    Start = start,
+                                });
+                                responseMessage = "Sprint save!";
+                                _dbContext.Conversations.Update(conversation);
+                            }
+                            catch (Exception e)
+                            {
+                                responseMessage = "Incorrect date input try format M/d/yyyy";
+                            }
+                        }
+                        else
+                        {
+                            responseMessage = "Need add date info start than end";
+                        }
+
+                        break;
+                    case "update":
+                        if (sprints.Any())
+                        {
+                            var sprint = sprints.FirstOrDefault(s => s.Number == number);
+
+                            if (sprint != null)
+                            {
+                                try
+                                {
+                                    var start = ConvertToDate(keywords[2]);
+                                    var end = ConvertToDate(keywords[3]);
+                                    sprint.End = end;
+                                    sprint.Start = start;
+                                    responseMessage = "You successfuly update sprint info";
+                                    _dbContext.Conversations.Update(conversation);
+                                }
+                                catch (Exception e)
+                                {
+                                    responseMessage = "Incorrect date input try format M/d/yyyy";
+                                }
+                            }
+                            else
+                            {
+                                responseMessage = $"Sprint number {number} doesn't exist";
+                            }
+                        }
+                        else
+                        {
+                            responseMessage = "You don't have any message";
+                        }
+
+                        break;
+                    case "delete":
+                        if (sprints.Any())
+                        {
+                            var sprint = sprints.FirstOrDefault(s => s.Number == number);
+
+                            if (sprint != null)
+                            {
+                                sprints.Remove(sprint);
+                                _dbContext.Conversations.Update(conversation);
+                            }
+                        }
+                        else
+                        {
+                            responseMessage = "You don't have any sprints";
+                        }
+                        break;
+                }
+            }
+            else
+            {
+                responseMessage =
+                    "Need to add _`command(add, update, delete)` `sprint number` `start date` `end date`_";
+            }
+
+
+            var requestMessage = new SendMessageRequest()
+            {
+                ChatId = update.Message.Chat.Id.ToString(),
+                Text = responseMessage,
+                FormattingMessageType = FormattingMessageType.Markdown,
+            };
+
+            _telegramService.SendMessageAsync(requestMessage).ConfigureAwait(false);
+
+            _dbContext.Save();
+        }
 
         private async Task GetMergeStatAsync(Update update)
         {
@@ -369,7 +476,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                         needMr.Reactions.Count(c => c.ReactionType == ReactionType.DisLike));
 
                     returnedMessage.ChatId = conversation.MRChat.Id;
-                    
+
                     returnedMessage.Text = $"{needMr.Description} \nby {users.FirstOrDefault(c => c.UserId.Equals(needMr.OwnerId)).Name}";
                     returnedMessage.EditMessageId = messageId;
 
@@ -435,8 +542,6 @@ For all of this statistics you can add start and end date of publish date(For ex
                             $"User *{needUser.Name}* commented your MR *{new Regex(MR_REMOVE_PATTERN).Replace(needMr.MrUrl, string.Empty)}* or will send you a message 😊",
                         FormattingMessageType = FormattingMessageType.Markdown,
                     };
-
-                    AddUsersButtonToAnswer(requestMessage);
 
                     _telegramService.SendMessageAsync(requestMessage).ConfigureAwait(false);
                 }
@@ -538,8 +643,6 @@ For all of this statistics you can add start and end date of publish date(For ex
                                 $"User *{needUser.Name}* commented your MR *{new Regex(MR_REMOVE_PATTERN).Replace(versionedMr.MrUrl, string.Empty)}* or will send you a message 😊",
                             FormattingMessageType = FormattingMessageType.Markdown,
                         };
-
-                        AddUsersButtonToAnswer(requestMessage);
 
                         _telegramService.SendMessageAsync(requestMessage).ConfigureAwait(false);
                     }
@@ -684,8 +787,6 @@ For all of this statistics you can add start and end date of publish date(For ex
                             },
                         };
 
-                        AddUsersButtonToAnswer(requestMessage);
-
                         _telegramService.SendMessageAsync(requestMessage).ConfigureAwait(false);
                     }
                 }
@@ -798,8 +899,6 @@ For all of this statistics you can add start and end date of publish date(For ex
                                     },
                                 },
                             };
-
-                            AddUsersButtonToAnswer(requestMessage);
 
                             _telegramService.SendMessageAsync(requestMessage).ConfigureAwait(false);
                         }
@@ -924,7 +1023,6 @@ For all of this statistics you can add start and end date of publish date(For ex
             {
                 ChatId = convesationId,
             };
-            AddUsersButtonToAnswer(responseMessageForUser);
 
             var messageText = message.Message.Text;
 
@@ -986,7 +1084,7 @@ For all of this statistics you can add start and end date of publish date(For ex
                     lineOfMessage.RemoveAt(0);
                     description = string.Join('\r', lineOfMessage);
                 }
-                
+
                 if (string.IsNullOrEmpty(description))
                 {
                     responseMessageForUser.Text = "Please add description for your MR to message, thanks 😊";
@@ -1127,22 +1225,37 @@ For all of this statistics you can add start and end date of publish date(For ex
             var components = message.Split(' ');
             var command = components[0];
             var startDate = default(DateTimeOffset);
-            if (components.Length > 1)
-            {
-                startDate = new DateTimeOffset(Convert.ToDateTime(components[1]));
-            }
-
             var endDate = default(DateTimeOffset);
-            if (components.Length > 2)
-            {
-                endDate = new DateTimeOffset(Convert.ToDateTime(components[2]));
-            }
+            var conversations = _dbContext.Conversations.GetAll();
+            var conversation = conversations.FirstOrDefault(c => c.MRChat != null);
 
+            if (components.Length > 2 && components[1].Equals("sprint"))
+            {
+                var number = Convert.ToInt32(components[2]);
+
+                var sprint = conversation.MRChat.Sprints.FirstOrDefault(s => s.Number == number);
+                if (sprint != null)
+                {
+                    startDate = new DateTimeOffset(sprint.Start);
+                    endDate = new DateTimeOffset(sprint.End);
+                }
+            }
+            else
+            {
+                if (components.Length > 1)
+                {
+                    startDate = new DateTimeOffset(Convert.ToDateTime(components[1]));
+                }
+
+                if (components.Length > 2)
+                {
+                    endDate = new DateTimeOffset(Convert.ToDateTime(components[2]));
+                }
+            }
+            
             SaveIfNeedUser(update.Message.Sender);
 
             var result = string.Empty;
-            var conversations = _dbContext.Conversations.GetAll();
-            var conversation = conversations.FirstOrDefault();
             var users = _dbContext.Users.GetAll().ToList();
 
             if (conversation != null)
@@ -1161,6 +1274,11 @@ For all of this statistics you can add start and end date of publish date(For ex
                     case "_getunmarked":
                         result = StatHtmlBuilder.GetUnmarkedCountMergePerDay(conversation.ListOfMerge.ToList(), users, startDate, endDate);
                         break;
+                    case "_getunmarkedperuser":
+                        result = StatHtmlBuilder.GetUnmarkedMergePerUser(conversation.ListOfMerge.ToList(), users,
+                            startDate, endDate);
+                        break;
+                        
                 }
 
                 var responseMessageForUser = new SendDocumentRequest()
@@ -1169,14 +1287,12 @@ For all of this statistics you can add start and end date of publish date(For ex
                     Document = string.Empty
                 };
 
-                AddUsersButtonToAnswer(responseMessageForUser);
-
                 _telegramService.SendDocumentAsync(responseMessageForUser, result).ConfigureAwait(false);
             }
         }
 
         #endregion
-        
+
         #region Helpers
 
         private async Task<bool> IsMrContainceAsync(string mrUrl, string chatId)
@@ -1220,16 +1336,6 @@ For all of this statistics you can add start and end date of publish date(For ex
         private string GetUserFullName(TelegramBotApi.Models.User user)
         {
             return $"{user.FirstName} {user.LastName}";
-        }
-
-        private void AddUsersButtonToAnswer(SendMessageRequest message)
-        {
-            message.ReplyMarkup = GetKeyboardForDefaultMessage();
-        }
-
-        private void AddUsersButtonToAnswer(BaseRequest message)
-        {
-            message.ReplyMarkup = GetKeyboardForDefaultMessage();
         }
 
         private User SaveIfNeedUser(TelegramBotApi.Models.User user)
@@ -1343,6 +1449,15 @@ For all of this statistics you can add start and end date of publish date(For ex
             {
                 InlineKeyboardButtons = buttons,
             };
+        }
+
+        private DateTime ConvertToDate(string date)
+        {
+            DateTimeFormatInfo dtfi = CultureInfo.CreateSpecificCulture("en-US").DateTimeFormat;
+            return Convert.ToDateTime(date, new DateTimeFormatInfo()
+            {
+                ShortDatePattern = dtfi.ShortDatePattern,
+            });
         }
 
         #endregion
