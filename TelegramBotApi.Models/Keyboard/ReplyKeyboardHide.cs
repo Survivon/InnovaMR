@@ -6,7 +6,7 @@
     [DataContract]
     public class ReplyKeyboardHide : IKeyboard
     {
-        [DataMember(Name = "hide_keyboard")]
+        [DataMember(Name = "remove_keyboard")]
         public bool IsHideKeyboard { get; set; }
 
         [DataMember(Name = "selective")]

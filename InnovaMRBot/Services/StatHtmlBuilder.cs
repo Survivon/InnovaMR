@@ -15,7 +15,7 @@ namespace InnovaMRBot.Services
             "<!DOCTYPE html><html><head><meta charset=\"utf-8\" /><title>Statistics</title><style>table, th, td { border: 1px solid black;border-collapse: collapse; } th, td { padding: 5px;text-align: left; } tr:nth-child(even) {background: #d1e2ff} tr:nth-child(odd) { background: #ffebd1} </style></head><body>{0}</body></html>";
 
         // ex: getalldata 24/11/2018 28/11/2018
-        public static string GetAllData(List<MergeSetting> merge, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetAllData(List<MergeSetting> merge, List<User> usersList, User currentUser, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
             IEnumerable<IGrouping<string, MergeSetting>> groupedMerges;
 
@@ -65,8 +65,8 @@ namespace InnovaMRBot.Services
                                        $"<td rowspan=\"{totalRowCount}\">{groupedMerge.Key}</td>" +
                                        $"<td><a href=\"{first.MrUrl}\">{first.MrUrl}</a></td>" +
                                        $"<td>{string.Join("<br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
-                                       $"<td>{first.Description}</td><td>{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td><td>{first.CountOfChange}</td>" +
-                                       $"<td>{string.Join("<hr><br>", first.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"<td>{first.Description}</td><td>{first.PublishDate.Value.GetUserTime(currentUser)}</td><td>{first.CountOfChange}</td>" +
+                                       $"<td>{string.Join("<hr><br>", first.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
                                        $"<td></td>" +
                                        $"<td></td>" +
                                        $"<td></td>" +
@@ -80,21 +80,21 @@ namespace InnovaMRBot.Services
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\"><a href=\"{first.MrUrl}\">{first.MrUrl}</a></td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", first.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.Description}</td>" +
-                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.PublishDate.Value.GetUserTime(currentUser)}</td>" +
                                        $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{first.CountOfChange}</td>" +
-                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", first.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
-                                       $"<td>{firstVersion.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                                       $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", first.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
+                                       $"<td>{firstVersion.PublishDate.Value.GetUserTime(currentUser)}</td>" +
                                        $"<td>{firstVersion.Description}</td>" +
-                                       $"<td>{string.Join("<hr><br>", firstVersion.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                       $"<td>{string.Join("<hr><br>", firstVersion.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
                                        $"</tr>");
 
                     foreach (var versionedMergeRequest in first.VersionedSetting.Skip(1))
                     {
                         resultTable.Append(
                             $"<tr>" +
-                            $"<td>{versionedMergeRequest.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td>{versionedMergeRequest.PublishDate.Value.GetUserTime(currentUser)}</td>" +
                             $"<td>{versionedMergeRequest.Description}</td>" +
-                            $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
                             $"</tr>");
                     }
                 }
@@ -112,9 +112,9 @@ namespace InnovaMRBot.Services
                             $"<td><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td>" +
                             $"<td>{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                             $"<td>{mergeSetting.Description}</td>" +
-                            $"<td>{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td>{mergeSetting.PublishDate.Value.GetUserTime(currentUser)}</td>" +
                             $"<td>{mergeSetting.CountOfChange}</td>" +
-                            $"<td>{string.Join("<hr><br>", mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td>{string.Join("<hr><br>", mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
                             $"<td></td>" +
                             $"<td></td>" +
                             $"<td></td>" +
@@ -128,21 +128,21 @@ namespace InnovaMRBot.Services
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\"><a href=\"{mergeSetting.MrUrl}\">{mergeSetting.MrUrl}</a></td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<br>", mergeSetting.TicketsUrl.Split(';').Select(l => $"<a href=\"{l}\">{l}</a>").ToList())}</td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.Description}</td>" +
-                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.PublishDate.Value.GetUserTime(currentUser)}</td>" +
                             $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{mergeSetting.CountOfChange}</td>" +
-                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
-                            $"<td>{firstVersioned.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                            $"<td rowspan=\"{countOfRowsForFirstVersioned}\">{string.Join("<hr><br>", mergeSetting.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
+                            $"<td>{firstVersioned.PublishDate.Value.GetUserTime(currentUser)}</td>" +
                             $"<td>{firstVersioned.Description}</td>" +
-                            $"<td>{string.Join("<hr><br>", firstVersioned.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                            $"<td>{string.Join("<hr><br>", firstVersioned.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
                             $"</tr>");
 
                         foreach (var versionedMergeRequest in mergeSetting.VersionedSetting.Skip(1))
                         {
                             resultTable.Append(
                                 $"<tr>" +
-                                $"<td>{versionedMergeRequest.PublishDate.Value:MM/dd/yy H:mm:ss}</td>" +
+                                $"<td>{versionedMergeRequest.PublishDate.Value.GetUserTime(currentUser)}</td>" +
                                 $"<td>{versionedMergeRequest.Description}</td>" +
-                                $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime:MM/dd/yy H:mm:ss}"))}</td>" +
+                                $"<td>{string.Join("<hr><br>", versionedMergeRequest.Reactions.Where(r => r.ReactionType == ReactionType.Like).Select(c => $"{c.User.Name} in {c.ReactionTime.GetUserTime(currentUser)}"))}</td>" +
                                 $"</tr>");
                         }
                     }
@@ -161,7 +161,7 @@ namespace InnovaMRBot.Services
         }
 
         // ex: getmrreaction 24/11/2018 28/11/2018
-        public static string GetMRReaction(List<MergeSetting> merge, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetMRReaction(List<MergeSetting> merge, List<User> usersList, User currentUser, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
             IEnumerable<IGrouping<string, MergeSetting>> groupedMerges;
 
@@ -228,7 +228,7 @@ namespace InnovaMRBot.Services
         }
 
         // ex: getusermrreaction 24/11/2018 28/11/2018
-        public static string GetUsersMRReaction(List<MergeSetting> merges, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetUsersMRReaction(List<MergeSetting> merges, List<User> usersList, User currentUser, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
             MapUsers(merges, usersList);
 
@@ -262,7 +262,7 @@ namespace InnovaMRBot.Services
         }
 
         // ex: getunmarked 24/11/2018 28/11/2018
-        public static string GetUnmarkedCountMergePerDay(List<MergeSetting> merge, List<User> usersList, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
+        public static string GetUnmarkedCountMergePerDay(List<MergeSetting> merge, List<User> usersList, User currentUser, DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
             IEnumerable<IGrouping<DateTime, MergeSetting>> groupedMerges;
 
@@ -299,7 +299,7 @@ namespace InnovaMRBot.Services
         }
 
 
-        public static string GetUnmarkedMergePerUser(List<MergeSetting> merge, List<User> usersList,
+        public static string GetUnmarkedMergePerUser(List<MergeSetting> merge, List<User> usersList, User currentUser,
             DateTimeOffset start = default(DateTimeOffset), DateTimeOffset end = default(DateTimeOffset))
         {
             IEnumerable<IGrouping<string, MergeSetting>> groupedMerges;

@@ -25,5 +25,7 @@ namespace InnovaMRBot.Models
         public string Description { get; set; }
 
         public MergeSetting MergeSetting { get; set; }
+
+        public bool IsHadAlreadyChange { get; set; }
     }
 }

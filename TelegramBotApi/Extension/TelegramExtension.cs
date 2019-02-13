@@ -62,6 +62,27 @@ namespace TelegramBotApi.Extension
             return result;
         }
 
+        public static async Task<bool> RemoveMessageAsync(this Telegram telegram,
+            RemoveMessageRequest removeMessageRequest)
+        {
+            var result = false;
+
+            var url = telegram.GetFullPathUrl("deleteMessage");
+
+            var request = new ExternalRequest<ResponseAnswer<bool>, RemoveMessageRequest>()
+            {
+                Method = POST_METHOD,
+                PostContentType = "application/json",
+                PostContent = removeMessageRequest
+            };
+
+            var response = await RequestSender.Execute(DataAccessMode.Server, request, url).ConfigureAwait(false);
+
+            result = response.Result.Result;
+
+            return result;
+        }
+
         public static async Task<List<Update>> GetUpdatesAsync(this Telegram telegram)
         {
             var result = new List<Update>();

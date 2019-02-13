@@ -252,7 +252,7 @@ namespace InnovaMRBotTest
                 }
             };
 
-            var res = StatHtmlBuilder.GetAllData(merges, new List<User>());
+            var res = StatHtmlBuilder.GetAllData(merges, new List<User>(), new User());
 
             Assert.True(true);
         }

@@ -100,6 +100,7 @@
     <Compile Include="Telegram\Request\GetUpdatesRequest.cs" />
     <Compile Include="Telegram\Request\GetUserProfilePhotoRequest.cs" />
     <Compile Include="Telegram\Request\KickChatMemberRequest.cs" />
+    <Compile Include="Telegram\Request\RemoveMessageRequest.cs" />
     <Compile Include="Telegram\Request\SendAudioRequest.cs" />
     <Compile Include="Telegram\Request\SendBotActionRequest.cs" />
     <Compile Include="Telegram\Request\SendContactRequest.cs" />
