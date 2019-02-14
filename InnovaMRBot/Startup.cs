@@ -1,23 +1,18 @@
-﻿using InnovaMRBot.Bots;
-using InnovaMRBot.Helpers;
-using InnovaMRBot.Models;
+﻿using InnovaMRBot.Models;
 using InnovaMRBot.Repository;
 using InnovaMRBot.Services;
 using InnovaMRBot.Services.Hosted;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Configuration;
-using Microsoft.Bot.Connector.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
-using System.Linq;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Telegram;
 

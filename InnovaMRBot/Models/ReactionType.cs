@@ -4,5 +4,6 @@
     {
         Like = 0,
         DisLike = 1,
+        Watch = 2,
     }
 }

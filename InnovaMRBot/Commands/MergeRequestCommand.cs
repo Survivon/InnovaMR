@@ -92,6 +92,7 @@ namespace InnovaMRBot.Commands
             if (conversation == null) return;
 
             var needUser = SaveIfNeedUser(update.Message.Sender);
+            UpdateUserChatIdNeed(needUser, convesationId);
 
             if (IsMrContaince(mrUrl))
             {

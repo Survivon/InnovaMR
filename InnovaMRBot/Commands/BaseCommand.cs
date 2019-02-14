@@ -129,6 +129,19 @@ namespace InnovaMRBot.Commands
             return needUser;
         }
 
+        protected void UpdateUserChatIdNeed(User user, string chatId)
+        {
+            if (string.IsNullOrEmpty(user.ChatId))
+            {
+                var needUser = _dbContext.Users.GetAll().FirstOrDefault(u => u.UserId == user.UserId);
+
+                needUser.ChatId = chatId;
+
+                _dbContext.Users.Update(needUser);
+                _dbContext.Save();
+            }
+        }
+
         protected void AddOrUpdateUser(User user, bool isNeedUpdate = true)
         {
             var users = _dbContext.Users.GetAll();

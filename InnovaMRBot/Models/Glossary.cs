@@ -33,5 +33,16 @@
 
             public const string GET_USER_MRREACTION_STAT_SUFIX = "_getusermrreaction";
         }
+
+        public static class InlineAction
+        {
+            public const string SUCCESS_REACTION = "/success reaction";
+
+            public const string BAD_REACTION = "/bad reaction";
+
+            public const string START_WATCH = "/start watch";
+
+            public const string GET_STAT = "/get stat";
+        }
     }
 }
