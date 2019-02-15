@@ -1,6 +1,5 @@
 ﻿using InnovaMRBot.Models;
 using System;
-using System.Threading.Tasks;
 
 namespace InnovaMRBot.Repository
 {
@@ -9,10 +8,13 @@ namespace InnovaMRBot.Repository
         private readonly BotContext _dbContext;
         private ConversationSettingRepository _conversationRepository;
         private UserRepository _userRepository;
+        private ActionRepository _actionRepository;
 
         public ConversationSettingRepository Conversations => _conversationRepository ?? (_conversationRepository = new ConversationSettingRepository(_dbContext));
 
         public UserRepository Users => _userRepository ?? (_userRepository = new UserRepository(_dbContext));
+
+        public ActionRepository Actions => _actionRepository ?? (_actionRepository = new ActionRepository(_dbContext));
 
         public UnitOfWork(BotContext dbContext) => _dbContext = dbContext;
 

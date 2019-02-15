@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramBotApi", "TelegramB
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramBotApi.Models", "TelegramBotApi.Models\TelegramBotApi.Models.csproj", "{804B1BF1-5146-41D7-AEB6-629DD5C2D2C3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InnovaScheduler", "InnovaScheduler\InnovaScheduler.csproj", "{8204E88C-BC5D-4241-B9C5-EC180086CB42}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,12 @@ Global
 		{804B1BF1-5146-41D7-AEB6-629DD5C2D2C3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{804B1BF1-5146-41D7-AEB6-629DD5C2D2C3}.ReleaseDeploy|Any CPU.ActiveCfg = ReleaseDeploy|Any CPU
 		{804B1BF1-5146-41D7-AEB6-629DD5C2D2C3}.ReleaseDeploy|Any CPU.Build.0 = ReleaseDeploy|Any CPU
+		{8204E88C-BC5D-4241-B9C5-EC180086CB42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8204E88C-BC5D-4241-B9C5-EC180086CB42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8204E88C-BC5D-4241-B9C5-EC180086CB42}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8204E88C-BC5D-4241-B9C5-EC180086CB42}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8204E88C-BC5D-4241-B9C5-EC180086CB42}.ReleaseDeploy|Any CPU.ActiveCfg = Release|Any CPU
+		{8204E88C-BC5D-4241-B9C5-EC180086CB42}.ReleaseDeploy|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

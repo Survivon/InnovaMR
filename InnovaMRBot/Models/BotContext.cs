@@ -12,6 +12,8 @@ namespace InnovaMRBot.Models
 
         public DbSet<VersionedMergeRequest> VersionedMergeRequests { get; set; }
 
+        public DbSet<Action> Actions { get; set; }
+
         public BotContext(DbContextOptions<BotContext> options)
             : base(options)
         {

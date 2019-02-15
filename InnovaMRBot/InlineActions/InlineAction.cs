@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Models;
+using InnovaMRBot.Models.Enum;
 using InnovaMRBot.Repository;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
@@ -21,7 +22,9 @@ namespace InnovaMRBot.InlineActions
     {
         private const string MR_REMOVE_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/";
 
-        public static readonly Dictionary<string, Func<Update, Telegram, UnitOfWork, Task>> Actions = new Dictionary<string, Func<Update, Telegram, UnitOfWork, Task>>()
+        private const int WATCH_TIMEOUT_MINUTE = 5;
+
+        public static readonly Dictionary<string, Func<Update, Telegram, UnitOfWork, Action<Guid, ActionType>, Task>> Actions = new Dictionary<string, Func<Update, Telegram, UnitOfWork, Action<Guid, ActionType>, Task>>()
         {
             { Glossary.InlineAction.GET_STAT, GetMergeStatAsync },
             { Glossary.InlineAction.BAD_REACTION, SetupBadReactionAsync },
@@ -29,7 +32,7 @@ namespace InnovaMRBot.InlineActions
             { Glossary.InlineAction.START_WATCH, StartWatchMergeAsync },
         };
 
-        private static async Task GetMergeStatAsync(Update update, Telegram telegramService, UnitOfWork dbContext)
+        private static async Task GetMergeStatAsync(Update update, Telegram telegramService, UnitOfWork dbContext, Action<Guid, ActionType> addAction)
         {
             var messageId = update.CallbackQuery.Message.Id.ToString();
 
@@ -118,7 +121,7 @@ namespace InnovaMRBot.InlineActions
             return textForShare.ToString();
         }
 
-        private static async Task SetupBadReactionAsync(Update update, Telegram telegramService, UnitOfWork dbContext)
+        private static async Task SetupBadReactionAsync(Update update, Telegram telegramService, UnitOfWork dbContext, Action<Guid, ActionType> addAction)
         {
             var conversationId = update.CallbackQuery.Message.Chat.Id.ToString();
 
@@ -141,6 +144,23 @@ namespace InnovaMRBot.InlineActions
             var userId = update.CallbackQuery.Sender.Id.ToString();
             var users = dbContext.Users.GetAll();
             var needUser = SaveIfNeedUser(update.CallbackQuery.Sender, dbContext);
+
+            //WatchBlock
+            {
+                var actions = dbContext.Actions.GetAll();
+
+                var action = actions.FirstOrDefault(a =>
+                    a.MessageId == update.CallbackQuery.Message.Id.ToString() && a.ActionFor == needUser.ChatId);
+
+                if (action != null)
+                {
+                    action.IsActive = false;
+
+                    dbContext.Actions.Update(action);
+
+                    addAction.Invoke(action.Id, ActionType.Remove);
+                }
+            }
 
             if (needMr != null)
             {
@@ -341,7 +361,7 @@ namespace InnovaMRBot.InlineActions
             dbContext.Save();
         }
 
-        private static async Task SetupMessageReactionAsync(Update update, Telegram telegramService, UnitOfWork dbContext)
+        private static async Task SetupMessageReactionAsync(Update update, Telegram telegramService, UnitOfWork dbContext, Action<Guid, ActionType> addAction)
         {
             var conversationId = update.CallbackQuery.Message.Chat.Id.ToString();
 
@@ -363,7 +383,23 @@ namespace InnovaMRBot.InlineActions
 
             var userId = update.CallbackQuery.Sender.Id.ToString();
             var users = dbContext.Users.GetAll();
+            var actions = dbContext.Actions.GetAll();
             var needUser = SaveIfNeedUser(update.CallbackQuery.Sender, dbContext);
+
+            //WatchBlock
+            {
+                var action = actions.FirstOrDefault(a =>
+                    a.MessageId == update.CallbackQuery.Message.Id.ToString() && a.ActionFor == needUser.ChatId);
+
+                if (action != null)
+                {
+                    action.IsActive = false;
+
+                    dbContext.Actions.Update(action);
+
+                    addAction.Invoke(action.Id, ActionType.Remove);
+                }
+            }
 
             if (needMr != null)
             {
@@ -398,7 +434,7 @@ namespace InnovaMRBot.InlineActions
 
                 if (needMr.OwnerId.Equals(needUser.UserId))
                 {
-                    GetMergeStatAsync(update, telegramService, dbContext).ConfigureAwait(false);
+                    GetMergeStatAsync(update, telegramService, dbContext, addAction).ConfigureAwait(false);
 
                     return;
                 }
@@ -437,6 +473,21 @@ namespace InnovaMRBot.InlineActions
 
                 if (needMr.Reactions.Count(r => r.ReactionType == ReactionType.Like) == 2)
                 {
+                    //ReviewBlock
+                    {
+                        var action = actions.FirstOrDefault(a =>
+                            a.MessageId == update.CallbackQuery.Message.Id.ToString() &&
+                            string.IsNullOrEmpty(a.ActionFor));
+
+                        if (action != null)
+                        {
+                            action.IsActive = false;
+                            dbContext.Actions.Update(action);
+
+                            addAction.Invoke(action.Id, ActionType.Remove);
+                        }
+                    }
+
                     if (needMr.Owner == null)
                     {
                         needMr.Owner = users.FirstOrDefault(u => u.UserId.Equals(needMr.OwnerId));
@@ -514,7 +565,7 @@ namespace InnovaMRBot.InlineActions
 
                     if (versionedMr.OwnerId.Equals(needUser.UserId))
                     {
-                        GetMergeStatAsync(update, telegramService, dbContext).ConfigureAwait(false);
+                        GetMergeStatAsync(update, telegramService, dbContext, addAction).ConfigureAwait(false);
                         return;
                     }
 
@@ -590,7 +641,7 @@ namespace InnovaMRBot.InlineActions
             dbContext.Save();
         }
 
-        private static async Task StartWatchMergeAsync(Update update, Telegram telegramService, UnitOfWork dbContext)
+        private static async Task StartWatchMergeAsync(Update update, Telegram telegramService, UnitOfWork dbContext, Action<Guid, ActionType> addAction)
         {
             var conversationId = update.CallbackQuery.Message.Chat.Id.ToString();
 
@@ -630,7 +681,7 @@ namespace InnovaMRBot.InlineActions
 
                 if (needMr.OwnerId.Equals(needUser.UserId))
                 {
-                    GetMergeStatAsync(update, telegramService, dbContext).ConfigureAwait(false);
+                    GetMergeStatAsync(update, telegramService, dbContext, addAction).ConfigureAwait(false);
 
                     return;
                 }
@@ -707,7 +758,7 @@ namespace InnovaMRBot.InlineActions
 
                     if (versionedMr.OwnerId.Equals(needUser.UserId))
                     {
-                        GetMergeStatAsync(update, telegramService, dbContext).ConfigureAwait(false);
+                        GetMergeStatAsync(update, telegramService, dbContext, addAction).ConfigureAwait(false);
                         return;
                     }
 
@@ -760,8 +811,22 @@ namespace InnovaMRBot.InlineActions
                     }
                 }
             }
+            
+            // Add action
+            var action = new Models.Action()
+            {
+                Name = "Watch",
+                Id = Guid.NewGuid(),
+                MessageId = update.CallbackQuery.Message.Id.ToString(),
+                ActionFor = needUser.ChatId,
+                IsActive = true,
+                ExecDate = DateTime.UtcNow.AddMinutes(WATCH_TIMEOUT_MINUTE),
+                ActionMethod = Glossary.ActionType.WATCH_NOTIFICATION,
+            };
 
-            //TODO: add watch action to scheduler
+            dbContext.Actions.Create(action);
+
+            addAction.Invoke(action.Id, ActionType.Add);
 
             dbContext.Conversations.Update(conversation);
             dbContext.Save();

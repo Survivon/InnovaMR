@@ -43,6 +43,19 @@
             public const string START_WATCH = "/start watch";
 
             public const string GET_STAT = "/get stat";
+
+            public const string SUCCESS_REACTION_MR = "/success_reaction_";
+
+            public const string BAD_REACTION_MR = "/bad_reaction_";
+        }
+
+        public static class ActionType
+        {
+            public const string UNMARKED = "unmarked";
+
+            public const string WATCH_NOTIFICATION = "watch";
+
+            public const string REVIEW_NOTIFICATION = "review";
         }
     }
 }

@@ -6,17 +6,25 @@ using InnovaMRBot.SubCommand;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using InnovaMRBot.Models.Enum;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
+using TelegramBotApi.Models.Enum;
+using TelegramBotApi.Models.Keyboard;
 using TelegramBotApi.Telegram;
 using TelegramBotApi.Telegram.Request;
+using Action = InnovaMRBot.Models.Action;
 
 namespace InnovaMRBot.Services
 {
     public class ChatStateService
     {
         #region Constants
+
+        protected const string TICKET_NUMBER_PATTERN = @"\w+[0-9]+";
 
         private const string MARK_MR_CONVERSATION = "/start MR chat";
         
@@ -25,6 +33,8 @@ namespace InnovaMRBot.Services
         private object _lockerSaveToDbObject = new object();
 
         private readonly List<BaseCommand> _commands;
+
+        private readonly Dictionary<Guid, Timer> _scheduler = new Dictionary<Guid, Timer>();
 
         #endregion
 
@@ -109,8 +119,19 @@ namespace InnovaMRBot.Services
             {
                 if (InlineAction.Actions.ContainsKey(update.CallbackQuery.Data))
                 {
-                    InlineAction.Actions[update.CallbackQuery.Data].Invoke(update, _telegramService, _dbContext)
+                    InlineAction.Actions[update.CallbackQuery.Data].Invoke(update, _telegramService, _dbContext, SchedulerAction)
                         .ConfigureAwait(false);
+                }
+                else
+                {
+                    if (update.CallbackQuery.Data.StartsWith(Glossary.InlineAction.SUCCESS_REACTION_MR))
+                    {
+                        //TODO: add method for like for MR
+                    }
+                    else if (update.CallbackQuery.Data.StartsWith(Glossary.InlineAction.BAD_REACTION_MR))
+                    {
+                        //TODO: add method for block for MR
+                    }
                 }
             }
             else if (update.InlineQuery != null)
@@ -128,8 +149,166 @@ namespace InnovaMRBot.Services
             }
         }
 
+        private void SchedulerAction(Guid id, ActionType type)
+        {
+            if (type == ActionType.Add)
+            {
+                var action = _dbContext.Actions.Get(id);
+
+                var needTimeToStart = DateTime.UtcNow.Subtract(action.ExecDate);
+
+                var data = new object[] { _dbContext, _telegramService, id.ToString() };
+
+                var timer = new Timer(SchedulerActionCallBack, data, needTimeToStart, TimeSpan.FromMilliseconds(-1));
+
+                _scheduler.Add(id, timer);
+            }
+            else
+            {
+                if (_scheduler.ContainsKey(id))
+                {
+                    var removeTimer = _scheduler[id];
+                    removeTimer.Dispose();
+                    _scheduler.Remove(id);
+                }
+            }
+        }
+
+        private void SchedulerActionCallBack(object state)
+        {
+            var getData = state as object[];
+
+            var dbContext = getData[0] as UnitOfWork;
+            var telegram = getData[1] as Telegram;
+            var id = Guid.Parse(getData[2] as string);
+
+            var action = dbContext.Actions.Get(id);
+            if (!action.IsActive) return;
+
+            var conversation = _dbContext.Conversations.GetAll().FirstOrDefault(c => c.MRChat != null);
+            var merge = conversation.ListOfMerge.FirstOrDefault(m => m.TelegramMessageId == action.MessageId);
+
+            if (merge == null)
+            {
+                merge = conversation.ListOfMerge.FirstOrDefault(m => m.VersionedSetting.Any(v => v.Id == action.MessageId));
+            }
+
+            switch (action.ActionMethod)
+            {
+                case Glossary.ActionType.UNMARKED:
+
+                    break;
+                case Glossary.ActionType.WATCH_NOTIFICATION:
+                    WatchNotification(dbContext, action, telegram, merge);
+                    break;
+                case Glossary.ActionType.REVIEW_NOTIFICATION:
+                    ReviewNotification(dbContext, action, telegram, merge);
+                    break;
+            }
+        }
+
+        private void WatchNotification(UnitOfWork unitOfWork, Action action, Telegram telegram, MergeSetting merge)
+        {
+            var owner = unitOfWork.Users.GetAll().FirstOrDefault(c => c.UserId.Equals(merge.OwnerId));
+
+            telegram.SendMessageAsync(new SendMessageRequest()
+            {
+                ChatId = action.ActionFor,
+                Text = $"Please mark MR number {Regex.Match(merge.MrUrl, TICKET_NUMBER_PATTERN).Value} by {owner.Name}",
+                FormattingMessageType = FormattingMessageType.Markdown,
+                ReplyMarkup = new InlineKeyboardMarkup()
+                {
+                    InlineKeyboardButtons = new List<List<InlineKeyboardButton>>()
+                    {
+                        new List<InlineKeyboardButton>()
+                        {
+                            new InlineKeyboardButton()
+                            {
+                                Text = "👍",
+                                CallbackData = $"{Glossary.InlineAction.SUCCESS_REACTION_MR}{action.MessageId}",
+                            },
+                            new InlineKeyboardButton()
+                            {
+                                Text = "MR",
+                                Url = merge.MrUrl,
+                            },
+                            new InlineKeyboardButton()
+                            {
+                                Text = "🚫",
+                                CallbackData = $"{Glossary.InlineAction.BAD_REACTION_MR}{action.MessageId}",
+                            },
+                        },
+                    },
+                },
+            }).ConfigureAwait(false);
+        }
+
+        private void ReviewNotification(UnitOfWork unitOfWork, Action action, Telegram telegram, MergeSetting merge)
+        {
+            var users = _dbContext.Users.GetAll();
+
+            var last = GetLastVersion(merge);
+            var owner = unitOfWork.Users.GetAll().FirstOrDefault(c => c.UserId.Equals(merge.OwnerId));
+
+            var neededUsers = users.Where(u =>
+                u.UserId != merge.OwnerId &&
+                last.Reactions.Any(r => r.UserId == u.UserId && r.ReactionType != ReactionType.Watch)).ToList();
+
+            foreach (var neededUser in neededUsers)
+            {
+                var text = $"Can you review MR number {Regex.Match(merge.MrUrl, TICKET_NUMBER_PATTERN).Value} by {owner.Name}?";
+                telegram.SendMessageAsync(new SendMessageRequest()
+                {
+                    ChatId = neededUser.ChatId,
+                    Text = text,
+                    FormattingMessageType = FormattingMessageType.Markdown,
+                    ReplyMarkup = new InlineKeyboardMarkup()
+                    {
+                        InlineKeyboardButtons = new List<List<InlineKeyboardButton>>()
+                        {
+                            new List<InlineKeyboardButton>()
+                            {
+                                new InlineKeyboardButton()
+                                {
+                                    Text = "👍",
+                                    CallbackData = $"{Glossary.InlineAction.SUCCESS_REACTION_MR}{action.MessageId}",
+                                },
+                                new InlineKeyboardButton()
+                                {
+                                    Text = "MR",
+                                    Url = merge.MrUrl,
+                                },
+                                new InlineKeyboardButton()
+                                {
+                                    Text = "🚫",
+                                    CallbackData = $"{Glossary.InlineAction.BAD_REACTION_MR}{action.MessageId}",
+                                },
+                            },
+                        },
+                    },
+                }).ConfigureAwait(false);
+            }
+        }
+
+        private static VersionedMergeRequest GetLastVersion(MergeSetting merge)
+        {
+            var result = new VersionedMergeRequest()
+            {
+                PublishDate = merge.PublishDate,
+                Reactions = merge.Reactions.Where(r => r.ReactionType == ReactionType.Like).ToList(),
+            };
+
+            if (merge.VersionedSetting != null && merge.VersionedSetting.Any())
+            {
+                return merge.VersionedSetting.FirstOrDefault(c =>
+                    c.PublishDate == merge.VersionedSetting.Max(m => m.PublishDate));
+            }
+
+            return result;
+        }
+
         #region Telegram part
-        
+
         private SendMessageRequest SetupMRConversation(Update message)
         {
             var conversationId = message.ChanelMessage.Chat.Id.ToString();
