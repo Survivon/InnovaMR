@@ -7,6 +7,7 @@ using InnovaMRBot.Helpers;
 using InnovaMRBot.Models;
 using InnovaMRBot.Models.Enum;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Keyboard;
@@ -26,6 +27,10 @@ namespace InnovaMRBot.Commands
         private const string MR_WITH_COMMITS_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/[0-9]+\/commits";
 
         private static readonly char[] trimmidChars = new char[] { '\r', '\n', ' ' };
+
+        private const int REVIEW_MR_DELAY_MINUTES = 1;
+
+        private ChatStateService _chatStateService;
 
         private readonly List<string> _changesNotation = new List<string>()
         {
@@ -51,6 +56,11 @@ namespace InnovaMRBot.Commands
         protected override string GetPattern()
         {
             return MR_PATTERN;
+        }
+
+        public void SetChatStateService(ChatStateService service)
+        {
+            _chatStateService = service;
         }
 
         public override async Task WorkerAsync(Update update)
@@ -125,6 +135,23 @@ namespace InnovaMRBot.Commands
                 responseMessage.AddButtonForRequest(mrUrl, needMr.TicketsUrl.Split(';').ToList());
 
                 var resMessage = await _telegram.SendMessageAsync(responseMessage);
+
+                // Add action
+                var action = new Models.Action()
+                {
+                    Name = "Review",
+                    Id = Guid.NewGuid(),
+                    MessageId = resMessage.Id.ToString(),
+                    IsActive = true,
+                    ExecDate = DateTime.UtcNow.AddMinutes(REVIEW_MR_DELAY_MINUTES),
+                    ActionMethod = Glossary.ActionType.REVIEW_NOTIFICATION,
+                };
+
+                _dbContext.Actions.Create(action);
+                _dbContext.Save();
+
+                _chatStateService.SchedulerAction(action.Id, ActionType.Add);
+                
                 versionedTicket.Id = resMessage.Id.ToString();
                 responseMessageForUser.Text = "Well done! I'll send it 😊" +
                                               $"Your mr number {Regex.Match(mrUrl, TICKET_NUMBER_PATTERN)}";
@@ -228,6 +255,22 @@ namespace InnovaMRBot.Commands
                 responseMessage.Text = $"{description.Trim(trimmidChars)} \nby {needUser.Name}";
 
                 var resMessage = await _telegram.SendMessageAsync(responseMessage);
+
+                // Add action
+                var action = new Models.Action()
+                {
+                    Name = "Review",
+                    Id = Guid.NewGuid(),
+                    MessageId = resMessage.Id.ToString(),
+                    IsActive = true,
+                    ExecDate = DateTime.UtcNow.AddMinutes(REVIEW_MR_DELAY_MINUTES),
+                    ActionMethod = Glossary.ActionType.REVIEW_NOTIFICATION,
+                };
+
+                _dbContext.Actions.Create(action);
+                _dbContext.Save();
+
+                _chatStateService.SchedulerAction(action.Id, ActionType.Add);
 
                 mrMessage.TelegramMessageId = resMessage.Id.ToString();
 

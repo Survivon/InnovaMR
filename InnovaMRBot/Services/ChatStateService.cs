@@ -5,7 +5,9 @@ using InnovaMRBot.Repository;
 using InnovaMRBot.SubCommand;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -68,7 +70,48 @@ namespace InnovaMRBot.Services
 
                 new EditCommand(_telegramService, _dbContext),
                 new EditMergeNumberActionSubCommand(_telegramService, _dbContext),
+
+                new ClearCommand(_telegramService, _dbContext),
             };
+
+            //Init MRs unmarked
+            var actions = _dbContext.Actions.GetAll();
+            var action = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.UNMARKED) && a.IsActive);
+            if (action == null)
+            {
+                var needTimeTime = DateTime.UtcNow;
+
+                if (needTimeTime.Hour >= 15)
+                {
+                    needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day + 1, 15, 0, 0);
+                }
+                else
+                {
+                    needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day, 15, 0, 0);
+                }
+                
+                var unmarkedAction = new Action()
+                {
+                    Name = "unmarked",
+                    Id = Guid.NewGuid(),
+                    ActionMethod = Glossary.ActionType.UNMARKED,
+                    ExecDate = needTimeTime,
+                    IsActive = true
+                };
+
+                _dbContext.Actions.Create(unmarkedAction);
+                _dbContext.Save();
+
+                SchedulerAction(unmarkedAction.Id, ActionType.Add);
+            }
+
+            if (actions.Any(a => a.IsActive) && !_scheduler.Any())
+            {
+                foreach (var action1 in actions.Where(a => a.IsActive))
+                {
+                    SchedulerAction(action1.Id, ActionType.Add);
+                }
+            }
         }
 
         public async Task GetUpdateFromTelegramAsync(Update update)
@@ -80,7 +123,11 @@ namespace InnovaMRBot.Services
 
                 var user = _dbContext.Users.GetAll().FirstOrDefault(u => u.UserId.Equals(userId));
 
-                if (user != null && user.Commands.Any())
+                if (message.Equals(ClearCommand.COMMAND))
+                {
+                    new ClearCommand(_telegramService, _dbContext).WorkerAsync(update).ConfigureAwait(false);
+                }
+                else if (user != null && user.Commands.Any())
                 {
                     var lastCommand = user.Commands.LastOrDefault();
 
@@ -90,6 +137,12 @@ namespace InnovaMRBot.Services
                 else
                 {
                     var command = _commands.FirstOrDefault(c => c.IsThisCommand(message));
+
+                    if (command is MergeRequestCommand mergeCommand)
+                    {
+                        mergeCommand.SetChatStateService(this);
+                    }
+
                     command?.WorkerAsync(update).ConfigureAwait(false);
                 }
             }
@@ -119,18 +172,22 @@ namespace InnovaMRBot.Services
             {
                 if (InlineAction.Actions.ContainsKey(update.CallbackQuery.Data))
                 {
-                    InlineAction.Actions[update.CallbackQuery.Data].Invoke(update, _telegramService, _dbContext, SchedulerAction)
+                    InlineAction.Actions[update.CallbackQuery.Data].Invoke(update, _telegramService, _dbContext, SchedulerAction, string.Empty)
                         .ConfigureAwait(false);
                 }
                 else
                 {
                     if (update.CallbackQuery.Data.StartsWith(Glossary.InlineAction.SUCCESS_REACTION_MR))
                     {
-                        //TODO: add method for like for MR
+                        var messageId = update.CallbackQuery.Data.Replace(Glossary.InlineAction.SUCCESS_REACTION_MR, string.Empty);
+                        InlineAction.Actions[Glossary.InlineAction.SUCCESS_REACTION].Invoke(update, _telegramService, _dbContext, SchedulerAction, messageId)
+                            .ConfigureAwait(false);
                     }
                     else if (update.CallbackQuery.Data.StartsWith(Glossary.InlineAction.BAD_REACTION_MR))
                     {
-                        //TODO: add method for block for MR
+                        var messageId = update.CallbackQuery.Data.Replace(Glossary.InlineAction.BAD_REACTION_MR, string.Empty);
+                        InlineAction.Actions[Glossary.InlineAction.BAD_REACTION].Invoke(update, _telegramService, _dbContext, SchedulerAction, messageId)
+                            .ConfigureAwait(false);
                     }
                 }
             }
@@ -149,13 +206,13 @@ namespace InnovaMRBot.Services
             }
         }
 
-        private void SchedulerAction(Guid id, ActionType type)
+        public void SchedulerAction(Guid id, ActionType type)
         {
             if (type == ActionType.Add)
             {
                 var action = _dbContext.Actions.Get(id);
 
-                var needTimeToStart = DateTime.UtcNow.Subtract(action.ExecDate);
+                var needTimeToStart = action.ExecDate.Subtract(DateTime.UtcNow);
 
                 var data = new object[] { _dbContext, _telegramService, id.ToString() };
 
@@ -196,7 +253,7 @@ namespace InnovaMRBot.Services
             switch (action.ActionMethod)
             {
                 case Glossary.ActionType.UNMARKED:
-
+                    UnmarkedNotification(dbContext, action, telegram);
                     break;
                 case Glossary.ActionType.WATCH_NOTIFICATION:
                     WatchNotification(dbContext, action, telegram, merge);
@@ -241,6 +298,11 @@ namespace InnovaMRBot.Services
                     },
                 },
             }).ConfigureAwait(false);
+
+            action.IsActive = false;
+
+            unitOfWork.Actions.Update(action);
+            unitOfWork.Save();
         }
 
         private void ReviewNotification(UnitOfWork unitOfWork, Action action, Telegram telegram, MergeSetting merge)
@@ -252,7 +314,7 @@ namespace InnovaMRBot.Services
 
             var neededUsers = users.Where(u =>
                 u.UserId != merge.OwnerId &&
-                last.Reactions.Any(r => r.UserId == u.UserId && r.ReactionType != ReactionType.Watch)).ToList();
+                !last.Reactions.Any(r => r.UserId == u.UserId && r.ReactionType == ReactionType.Watch)).ToList();
 
             foreach (var neededUser in neededUsers)
             {
@@ -287,6 +349,110 @@ namespace InnovaMRBot.Services
                         },
                     },
                 }).ConfigureAwait(false);
+            }
+
+            action.IsActive = false;
+
+            unitOfWork.Actions.Update(action);
+            unitOfWork.Save();
+        }
+
+        private void UnmarkedNotification(UnitOfWork unitOfWork, Action action, Telegram telegram)
+        {
+            var conv = unitOfWork.Conversations.GetAll();
+
+            var needConversation = conv.FirstOrDefault();
+
+            var merges = needConversation.ListOfMerge.ToList();
+
+            MapUsers(merges, unitOfWork.Users.GetAll().ToList());
+
+            var needMR = new List<Tuple<string, string, int>>();
+
+            foreach (var merge in merges)
+            {
+                var lastVersion = GetLastVersion(merge);
+
+                if (lastVersion.Reactions.Count < 2)
+                {
+                    needMR.Add(new Tuple<string, string, int>(merge.Owner.Name, merge.MrUrl, 2 - lastVersion.Reactions.Count));
+                }
+            }
+
+            if (!needMR.Any()) return;
+
+            var resultBuilder = new StringBuilder();
+
+            resultBuilder.AppendLine("<b>UNMARKED MergeRequests</b>");
+
+            foreach (var tuple in needMR)
+            {
+                resultBuilder.AppendLine($"MR: {tuple.Item2} by <i>{tuple.Item1}</i>");
+            }
+
+            resultBuilder.Append("\n\r");
+
+            var mrIconPath = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "MRBigIcon.png");
+
+            telegram.SendPhotoAsync(new SendPhotoRequest()
+            {
+                Caption = resultBuilder.ToString(),
+                ChatId = needConversation.MRChat.Id,
+                FormattingMessageType = FormattingMessageType.HTML,
+            }, mrIconPath).ConfigureAwait(false);
+
+            action.IsActive = false;
+
+            unitOfWork.Actions.Update(action);
+            unitOfWork.Save();
+            
+            var needTimeTime = DateTime.UtcNow;
+
+            if (needTimeTime.Hour >= 15)
+            {
+                needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day + 1, 15, 0, 0);
+            }
+            else
+            {
+                needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day, 15, 0, 0);
+            }
+
+            var unmarkedAction = new Action()
+            {
+                Name = "unmarked",
+                Id = Guid.NewGuid(),
+                ActionMethod = Glossary.ActionType.UNMARKED,
+                ExecDate = needTimeTime,
+                IsActive = true,
+            };
+
+            unitOfWork.Actions.Create(unmarkedAction);
+            unitOfWork.Save();
+
+            SchedulerAction(unmarkedAction.Id, ActionType.Add);
+        }
+
+        private static void MapUsers(List<MergeSetting> merge, List<Models.User> usersList)
+        {
+            if (usersList == null || !usersList.Any()) return;
+
+            foreach (var mergeSetting in merge)
+            {
+                mergeSetting.Owner = usersList.FirstOrDefault(u => u.UserId.Equals(mergeSetting.OwnerId));
+                foreach (var versionedMergeRequest in mergeSetting.VersionedSetting)
+                {
+                    foreach (var reaction in versionedMergeRequest.Reactions)
+                    {
+                        reaction.User = usersList.FirstOrDefault(u => u.UserId.Equals(reaction.UserId));
+                    }
+                }
+
+                foreach (var mergeSettingReaction in mergeSetting.Reactions)
+                {
+                    mergeSettingReaction.User = usersList.FirstOrDefault(u => u.UserId.Equals(mergeSettingReaction.UserId));
+                }
             }
         }
 
