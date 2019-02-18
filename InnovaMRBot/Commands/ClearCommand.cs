@@ -1,7 +1,10 @@
 ﻿using InnovaMRBot.Repository;
 using System.Threading.Tasks;
+using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
+using TelegramBotApi.Models.Keyboard;
 using TelegramBotApi.Telegram;
+using TelegramBotApi.Telegram.Request;
 
 namespace InnovaMRBot.Commands
 {
@@ -24,6 +27,12 @@ namespace InnovaMRBot.Commands
         public override async Task WorkerAsync(Update update)
         {
             ClearCommands(GetUserId(update));
+            _telegram.SendMessageAsync(new SendMessageRequest
+            {
+                Text = "Chain had clear 😊",
+                ChatId = update.Message.Chat.Id.ToString(),
+                ReplyMarkup = new ReplyKeyboardHide() { IsHideKeyboard = true },
+            }).ConfigureAwait(false);
         }
     }
 }

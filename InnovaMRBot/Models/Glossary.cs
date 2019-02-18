@@ -56,6 +56,8 @@
             public const string WATCH_NOTIFICATION = "watch";
 
             public const string REVIEW_NOTIFICATION = "review";
+
+            public const string CLEAR_TEMP_DATA = "cleartempdata";
         }
     }
 }

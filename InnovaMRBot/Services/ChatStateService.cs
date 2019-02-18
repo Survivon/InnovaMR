@@ -29,9 +29,9 @@ namespace InnovaMRBot.Services
         protected const string TICKET_NUMBER_PATTERN = @"\w+[0-9]+";
 
         private const string MARK_MR_CONVERSATION = "/start MR chat";
-        
+
         private const string REMOVE_MR_CONVERSATION = "/remove MR chat";
-        
+
         private object _lockerSaveToDbObject = new object();
 
         private readonly List<BaseCommand> _commands;
@@ -72,46 +72,14 @@ namespace InnovaMRBot.Services
                 new EditMergeNumberActionSubCommand(_telegramService, _dbContext),
 
                 new ClearCommand(_telegramService, _dbContext),
+
+                new ChangeUserRoleCommand(_telegramService, _dbContext),
+                new UserSettingRemoveOldMergeCommand(_telegramService, _dbContext),
+                new UserSettingTimeZoneSetupCommand(_telegramService, _dbContext),
             };
 
             //Init MRs unmarked
-            var actions = _dbContext.Actions.GetAll();
-            var action = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.UNMARKED) && a.IsActive);
-            if (action == null)
-            {
-                var needTimeTime = DateTime.UtcNow;
-
-                if (needTimeTime.Hour >= 15)
-                {
-                    needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day + 1, 15, 0, 0);
-                }
-                else
-                {
-                    needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day, 15, 0, 0);
-                }
-                
-                var unmarkedAction = new Action()
-                {
-                    Name = "unmarked",
-                    Id = Guid.NewGuid(),
-                    ActionMethod = Glossary.ActionType.UNMARKED,
-                    ExecDate = needTimeTime,
-                    IsActive = true
-                };
-
-                _dbContext.Actions.Create(unmarkedAction);
-                _dbContext.Save();
-
-                SchedulerAction(unmarkedAction.Id, ActionType.Add);
-            }
-
-            if (actions.Any(a => a.IsActive) && !_scheduler.Any())
-            {
-                foreach (var action1 in actions.Where(a => a.IsActive))
-                {
-                    SchedulerAction(action1.Id, ActionType.Add);
-                }
-            }
+            InitAction();
         }
 
         public async Task GetUpdateFromTelegramAsync(Update update)
@@ -216,6 +184,8 @@ namespace InnovaMRBot.Services
 
                 var data = new object[] { _dbContext, _telegramService, id.ToString() };
 
+                if (needTimeToStart < TimeSpan.Zero) return;
+
                 var timer = new Timer(SchedulerActionCallBack, data, needTimeToStart, TimeSpan.FromMilliseconds(-1));
 
                 _scheduler.Add(id, timer);
@@ -260,6 +230,9 @@ namespace InnovaMRBot.Services
                     break;
                 case Glossary.ActionType.REVIEW_NOTIFICATION:
                     ReviewNotification(dbContext, action, telegram, merge);
+                    break;
+                case Glossary.ActionType.CLEAR_TEMP_DATA:
+                    ClearTempData(dbContext, action);
                     break;
             }
         }
@@ -314,7 +287,7 @@ namespace InnovaMRBot.Services
 
             var neededUsers = users.Where(u =>
                 u.UserId != merge.OwnerId &&
-                !last.Reactions.Any(r => r.UserId == u.UserId && r.ReactionType == ReactionType.Watch)).ToList();
+                !last.Reactions.Any(r => r.UserId == u.UserId && r.ReactionType == ReactionType.Watch) && u.Role == UserRole.Dev).ToList();
 
             foreach (var neededUser in neededUsers)
             {
@@ -355,6 +328,111 @@ namespace InnovaMRBot.Services
 
             unitOfWork.Actions.Update(action);
             unitOfWork.Save();
+        }
+
+        private void ClearTempData(UnitOfWork unitOfWork, Action action)
+        {
+            var directoryPath = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "temp");
+
+            if (Directory.Exists(directoryPath))
+            {
+                var di = new DirectoryInfo(directoryPath);
+
+                foreach (var file in di.GetFiles())
+                {
+                    file.Delete();
+                }
+
+                foreach (var dir in di.GetDirectories())
+                {
+                    dir.Delete(true);
+                }
+            }
+
+            action.IsActive = false;
+            unitOfWork.Actions.Update(action);
+
+            var needTime = DateTime.UtcNow.AddHours(5);
+
+            var clearAction = new Action()
+            {
+                Name = "clear",
+                Id = Guid.NewGuid(),
+                ActionMethod = Glossary.ActionType.CLEAR_TEMP_DATA,
+                ExecDate = needTime,
+                IsActive = true,
+            };
+
+            unitOfWork.Actions.Create(clearAction);
+            unitOfWork.Save();
+
+            SchedulerAction(clearAction.Id, ActionType.Add);
+        }
+
+        private void InitAction()
+        {
+            var actions = _dbContext.Actions.GetAll();
+
+            if (actions.Any(a => a.IsActive) && !_scheduler.Any())
+            {
+                foreach (var action in actions.Where(a => a.IsActive))
+                {
+                    SchedulerAction(action.Id, ActionType.Add);
+                }
+            }
+
+            var dbUnmarkedAction = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.UNMARKED) && a.IsActive);
+            if (dbUnmarkedAction == null)
+            {
+                var needTimeTime = DateTime.UtcNow;
+
+                if (needTimeTime.Hour >= 15)
+                {
+                    needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day + 1, 15, 0, 0);
+                }
+                else
+                {
+                    needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day, 15, 0, 0);
+                }
+
+                var unmarkedAction = new Action()
+                {
+                    Name = "unmarked",
+                    Id = Guid.NewGuid(),
+                    ActionMethod = Glossary.ActionType.UNMARKED,
+                    ExecDate = needTimeTime,
+                    IsActive = true,
+                };
+
+                _dbContext.Actions.Create(unmarkedAction);
+                _dbContext.Save();
+
+                SchedulerAction(unmarkedAction.Id, ActionType.Add);
+            }
+
+            var dbClearTempDataAction = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.CLEAR_TEMP_DATA) && a.IsActive);
+            if (dbClearTempDataAction == null)
+            {
+                var needTime = DateTime.UtcNow.AddHours(5);
+
+                var clearAction = new Action()
+                {
+                    Name = "clear",
+                    Id = Guid.NewGuid(),
+                    ActionMethod = Glossary.ActionType.CLEAR_TEMP_DATA,
+                    ExecDate = needTime,
+                    IsActive = true,
+                };
+
+                _dbContext.Actions.Create(clearAction);
+                _dbContext.Save();
+
+                SchedulerAction(clearAction.Id, ActionType.Add);
+            }
+
         }
 
         private void UnmarkedNotification(UnitOfWork unitOfWork, Action action, Telegram telegram)
@@ -406,8 +484,7 @@ namespace InnovaMRBot.Services
             action.IsActive = false;
 
             unitOfWork.Actions.Update(action);
-            unitOfWork.Save();
-            
+
             var needTimeTime = DateTime.UtcNow;
 
             if (needTimeTime.Hour >= 15)

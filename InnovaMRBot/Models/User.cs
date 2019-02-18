@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using InnovaMRBot.Models.Enum;
 
 namespace InnovaMRBot.Models
 {
@@ -24,6 +25,38 @@ namespace InnovaMRBot.Models
         public bool CanRemoveOldMr { get; set; }
 
         public long TimeDiff { get; set; }
+
+        [NotMapped]
+        public UserRole Role
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(RoleInfo))
+                {
+                    return UserRole.Default;
+                }
+
+                if (RoleInfo.Equals(UserRole.Dev.ToString()))
+                {
+                    return UserRole.Dev;
+                }
+                else if (RoleInfo.Equals(UserRole.QA.ToString()))
+                {
+                    return UserRole.QA;
+                }
+                else if (RoleInfo.Equals(UserRole.PM.ToString()))
+                {
+                    return UserRole.PM;
+                }
+                else
+                {
+                    return UserRole.Default;
+                }
+            }
+            set => RoleInfo = value.ToString();
+        }
+
+        public string RoleInfo { get; set; }
 
         public string CommandsInfo
         {
