@@ -44,38 +44,41 @@ namespace InnovaMRBot.Services
 
         private readonly UnitOfWork _dbContext;
 
-        public ChatStateService(Telegram telegram, UnitOfWork dbContext)
+        private readonly Logger _logger;
+
+        public ChatStateService(Telegram telegram, UnitOfWork dbContext, Logger logger)
         {
             _telegramService = telegram;
             _dbContext = dbContext;
+            _logger = logger;
 
             _commands = new List<BaseCommand>()
             {
-                new CommonDocumentCommand(_telegramService, _dbContext),
-                new HelpCommand(_telegramService, _dbContext),
-                new MergeRequestCommand(_telegramService, _dbContext),
-                new StartCommand(_telegramService, _dbContext),
+                new CommonDocumentCommand(_telegramService, _dbContext, _logger),
+                new HelpCommand(_telegramService, _dbContext, _logger),
+                new MergeRequestCommand(_telegramService, _dbContext, _logger),
+                new StartCommand(_telegramService, _dbContext, _logger),
 
-                new SprintCommand(_telegramService, _dbContext),
-                new SprintAddActionSubCommand(_telegramService, _dbContext),
-                new SprintAddDateActionSubCommand(_telegramService, _dbContext),
-                new SprintUpdateActionSubCommand(_telegramService, _dbContext),
-                new SprintUpdateDateActionSubCommand(_telegramService, _dbContext),
-                new SprintRemoveActionSubCommand(_telegramService, _dbContext),
+                new SprintCommand(_telegramService, _dbContext, _logger),
+                new SprintAddActionSubCommand(_telegramService, _dbContext, _logger),
+                new SprintAddDateActionSubCommand(_telegramService, _dbContext, _logger),
+                new SprintUpdateActionSubCommand(_telegramService, _dbContext, _logger),
+                new SprintUpdateDateActionSubCommand(_telegramService, _dbContext, _logger),
+                new SprintRemoveActionSubCommand(_telegramService, _dbContext, _logger),
 
-                new GetStatisticCommand(_telegramService, _dbContext),
-                new GetStatisticAllActionSubCommand(_telegramService, _dbContext),
-                new GetStatisticSprintActionSubCommand(_telegramService, _dbContext),
-                new GetStatisticDateActionSubCommand(_telegramService, _dbContext),
+                new GetStatisticCommand(_telegramService, _dbContext, _logger),
+                new GetStatisticAllActionSubCommand(_telegramService, _dbContext, _logger),
+                new GetStatisticSprintActionSubCommand(_telegramService, _dbContext, _logger),
+                new GetStatisticDateActionSubCommand(_telegramService, _dbContext, _logger),
 
-                new EditCommand(_telegramService, _dbContext),
-                new EditMergeNumberActionSubCommand(_telegramService, _dbContext),
+                new EditCommand(_telegramService, _dbContext, _logger),
+                new EditMergeNumberActionSubCommand(_telegramService, _dbContext, _logger),
 
-                new ClearCommand(_telegramService, _dbContext),
+                new ClearCommand(_telegramService, _dbContext, _logger),
 
-                new ChangeUserRoleCommand(_telegramService, _dbContext),
-                new UserSettingRemoveOldMergeCommand(_telegramService, _dbContext),
-                new UserSettingTimeZoneSetupCommand(_telegramService, _dbContext),
+                new ChangeUserRoleCommand(_telegramService, _dbContext, _logger),
+                new UserSettingRemoveOldMergeCommand(_telegramService, _dbContext, _logger),
+                new UserSettingTimeZoneSetupCommand(_telegramService, _dbContext, _logger),
             };
 
             //Init MRs unmarked
@@ -93,7 +96,7 @@ namespace InnovaMRBot.Services
 
                 if (message.Equals(ClearCommand.COMMAND))
                 {
-                    new ClearCommand(_telegramService, _dbContext).WorkerAsync(update).ConfigureAwait(false);
+                    new ClearCommand(_telegramService, _dbContext, _logger).WorkerAsync(update).ConfigureAwait(false);
                 }
                 else if (user != null && user.Commands.Any())
                 {

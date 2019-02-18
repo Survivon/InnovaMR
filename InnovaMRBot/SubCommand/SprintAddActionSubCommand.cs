@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using InnovaMRBot.Commands;
 using InnovaMRBot.Helpers;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Enum;
@@ -19,7 +20,7 @@ namespace InnovaMRBot.SubCommand
     {
         public const string SUB_COMMAND = "sprintaddactionsubcommand";
 
-        public SprintAddActionSubCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public SprintAddActionSubCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = SUB_COMMAND;
         }
@@ -66,7 +67,7 @@ namespace InnovaMRBot.SubCommand
                 }
                 else
                 {
-                    new SprintAddDateActionSubCommand(_telegram, _dbContext).WorkerAsync(update).ConfigureAwait(false);
+                    new SprintAddDateActionSubCommand(_telegram, _dbContext, _logger).WorkerAsync(update).ConfigureAwait(false);
                 }
             }
             else
@@ -88,7 +89,7 @@ namespace InnovaMRBot.SubCommand
     {
         public const string SUB_COMMAND = "sprintadddateactionsubcommand";
 
-        public SprintAddDateActionSubCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public SprintAddDateActionSubCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = SUB_COMMAND;
         }

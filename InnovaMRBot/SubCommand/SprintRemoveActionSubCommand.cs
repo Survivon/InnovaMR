@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using InnovaMRBot.Commands;
 using InnovaMRBot.Models;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Enum;
@@ -17,7 +18,7 @@ namespace InnovaMRBot.SubCommand
     {
         public const string SUB_COMMAND = "sprintremoveactionsubcommand";
 
-        public SprintRemoveActionSubCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public SprintRemoveActionSubCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = SUB_COMMAND;
         }

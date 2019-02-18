@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Models;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Enum;
@@ -21,7 +22,7 @@ namespace InnovaMRBot.Commands
 
         public const string COMMANDID = "editcommand";
 
-        public EditCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public EditCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = COMMANDID;
         }
@@ -141,7 +142,7 @@ namespace InnovaMRBot.Commands
         {
             UpdateCommand(GetUserId(update), CommandId, update.Message.Text);
 
-            new EditMergeNumberActionSubCommand(_telegram, _dbContext).WorkerAsync(update).ConfigureAwait(false);
+            new EditMergeNumberActionSubCommand(_telegram, _dbContext, _logger).WorkerAsync(update).ConfigureAwait(false);
         }
 
         public static bool CanMrBeChanged(MergeSetting merge)
@@ -168,7 +169,7 @@ namespace InnovaMRBot.Commands
     {
         public const string COMMANDID = "editcommandnumberaction";
 
-        public EditMergeNumberActionSubCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public EditMergeNumberActionSubCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = COMMANDID;
         }

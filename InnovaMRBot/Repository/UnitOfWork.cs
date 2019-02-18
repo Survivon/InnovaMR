@@ -9,12 +9,15 @@ namespace InnovaMRBot.Repository
         private ConversationSettingRepository _conversationRepository;
         private UserRepository _userRepository;
         private ActionRepository _actionRepository;
+        private LoggerRepository _loggerRepository;
 
         public ConversationSettingRepository Conversations => _conversationRepository ?? (_conversationRepository = new ConversationSettingRepository(_dbContext));
 
         public UserRepository Users => _userRepository ?? (_userRepository = new UserRepository(_dbContext));
 
         public ActionRepository Actions => _actionRepository ?? (_actionRepository = new ActionRepository(_dbContext));
+
+        public LoggerRepository Logs => _loggerRepository ?? (_loggerRepository = new LoggerRepository(_dbContext));
 
         public UnitOfWork(BotContext dbContext) => _dbContext = dbContext;
 

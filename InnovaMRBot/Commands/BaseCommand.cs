@@ -1,14 +1,13 @@
 ﻿using InnovaMRBot.Helpers;
 using InnovaMRBot.Models;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TelegramBotApi.Models;
-using TelegramBotApi.Models.Keyboard;
 using TelegramBotApi.Telegram;
-using TelegramBotApi.Telegram.Request;
 using User = InnovaMRBot.Models.User;
 
 namespace InnovaMRBot.Commands
@@ -23,12 +22,15 @@ namespace InnovaMRBot.Commands
 
         protected readonly UnitOfWork _dbContext;
 
+        protected readonly Logger _logger;
+
         public string CommandId { get; protected set; }
 
-        protected BaseCommand(Telegram telegram, UnitOfWork dbContext)
+        protected BaseCommand(Telegram telegram, UnitOfWork dbContext, Logger logger)
         {
             _telegram = telegram;
             _dbContext = dbContext;
+            _logger = logger;
         }
 
         public virtual bool IsThisCommand(string message)

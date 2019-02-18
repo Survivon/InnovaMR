@@ -8,6 +8,8 @@ namespace InnovaMRBot.Models
 
         public DbSet<User> Users { get; set; }
 
+        public DbSet<Log> Logs { get; set; }
+
         public DbSet<MessageReaction> Reactions { get; set; }
 
         public DbSet<VersionedMergeRequest> VersionedMergeRequests { get; set; }

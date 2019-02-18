@@ -38,7 +38,7 @@ namespace InnovaMRBot.Commands
             "ИЗМЕНЕНО"
         };
 
-        public MergeRequestCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public MergeRequestCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = "mergerequestmaincommand";
         }

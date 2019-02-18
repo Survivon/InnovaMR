@@ -4,15 +4,12 @@ using InnovaMRBot.Services;
 using InnovaMRBot.Services.Hosted;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Bot.Builder.Integration;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Telegram;
 
@@ -44,17 +41,8 @@ namespace InnovaMRBot
             services.AddDbContext<BotContext>(options =>
                 options.UseSqlServer(connection));
 
-            services.AddSingleton(sp => new Telegram());
-
             services.AddSingleton(sp =>
             {
-                var options = sp.GetRequiredService<IOptions<BotFrameworkOptions>>().Value;
-                if (options == null)
-                {
-                    throw new InvalidOperationException("BotFrameworkOptions must be configured prior to setting up the state accessors");
-                }
-
-                var telegram = sp.GetService<Telegram>();
 
                 var scopeFactory = services
                     .BuildServiceProvider()
@@ -64,7 +52,27 @@ namespace InnovaMRBot
                 var provider = scope.ServiceProvider;
                 var dbContext = provider.GetRequiredService<BotContext>();
 
-                var accessors = new ChatStateService(telegram, new UnitOfWork(dbContext));
+                return new UnitOfWork(dbContext);
+            });
+
+            services.AddSingleton(sp => new Telegram());
+
+            services.AddSingleton(sp =>
+            {
+                var dbContext = sp.GetService<UnitOfWork>();
+
+                return new Logger(dbContext);
+            });
+
+            services.AddSingleton(sp =>
+            {
+                var telegram = sp.GetService<Telegram>();
+
+                var unitOfWork = sp.GetService<UnitOfWork>();
+
+                var logger = sp.GetService<Logger>();
+
+                var accessors = new ChatStateService(telegram, unitOfWork, logger);
 
                 return accessors;
             });
@@ -86,7 +94,7 @@ namespace InnovaMRBot
             var environment = _isProduction ? "production" : "development";
 
             var botConfig = MrConfigurationManager.Load(string.IsNullOrEmpty(botFilePath) ? $@".\BotConfiguration{environment}.bot" : string.Format(botFilePath, environment), secretKey);
-            
+
             app.UseDefaultFiles()
                 .UseStaticFiles()
                 .UseBotFramework().UseMvc(routes =>
@@ -100,7 +108,7 @@ namespace InnovaMRBot
                         template: $"{botConfig?.TelegramSetting?.BotKey ?? string.Empty}",
                         defaults: new { controller = "Telegram", action = "GetUpdateFromTelegram" });
                 });
-            
+
             if (botConfig.TelegramSetting == null || string.IsNullOrEmpty(botConfig.TelegramSetting.WebhookUrl) ||
                 string.IsNullOrEmpty(botConfig.TelegramSetting.BotKey)) return;
 

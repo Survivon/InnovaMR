@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using InnovaMRBot.Models.Enum;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Keyboard;
@@ -24,7 +25,7 @@ namespace InnovaMRBot.Commands
             { UserRole.QA, "QA" },
         };
 
-        public ChangeUserRoleCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public ChangeUserRoleCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = COMMANDID;
         }

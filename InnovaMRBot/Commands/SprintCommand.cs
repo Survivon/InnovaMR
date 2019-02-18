@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Models;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using InnovaMRBot.SubCommand;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
@@ -27,14 +28,14 @@ namespace InnovaMRBot.Commands
 
         private readonly Dictionary<string, BaseCommand> _subCommand = new Dictionary<string, BaseCommand>();
 
-        public SprintCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public SprintCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = COMMANDID;
             _subCommand = new Dictionary<string, BaseCommand>()
             {
-                { Glossary.Sprint.ADD_ACTION, new SprintAddActionSubCommand(telegram, dbContext) },
-                { Glossary.Sprint.UPDATE_ACTION, new SprintUpdateActionSubCommand(telegram, dbContext) },
-                { Glossary.Sprint.REMOVE_ACTION, new SprintRemoveActionSubCommand(telegram, dbContext) },
+                { Glossary.Sprint.ADD_ACTION, new SprintAddActionSubCommand(telegram, dbContext, _logger) },
+                { Glossary.Sprint.UPDATE_ACTION, new SprintUpdateActionSubCommand(telegram, dbContext, _logger) },
+                { Glossary.Sprint.REMOVE_ACTION, new SprintRemoveActionSubCommand(telegram, dbContext, _logger) },
             };
         }
 

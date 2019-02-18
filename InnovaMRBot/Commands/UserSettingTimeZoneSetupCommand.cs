@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Keyboard;
@@ -17,7 +18,7 @@ namespace InnovaMRBot.Commands
 
         private const string COMMANDID = "setuptimezonecommand";
 
-        public UserSettingTimeZoneSetupCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public UserSettingTimeZoneSetupCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = COMMANDID;
         }

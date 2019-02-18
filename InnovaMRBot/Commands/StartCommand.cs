@@ -1,7 +1,7 @@
-﻿
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using InnovaMRBot.Helpers;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Telegram;
@@ -14,7 +14,7 @@ namespace InnovaMRBot.Commands
     {
         private const string COMMAND = "/start";
 
-        public StartCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public StartCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = "startcommand";
         }

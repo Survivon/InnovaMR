@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Enum;
@@ -23,16 +24,15 @@ namespace InnovaMRBot.Commands
 
         private readonly Dictionary<string, BaseCommand> _subCommand = new Dictionary<string, BaseCommand>();
 
-        public GetStatisticCommand(Telegram telegram, UnitOfWork dbContext)
-            : base(telegram, dbContext)
+        public GetStatisticCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = COMMAND_ID;
 
             _subCommand = new Dictionary<string, BaseCommand>()
             {
-                { Glossary.Stat.ALL, new GetStatisticAllActionSubCommand(telegram, _dbContext) },
-                { Glossary.Stat.DATE, new GetStatisticDateActionSubCommand(telegram, _dbContext) },
-                { Glossary.Stat.SPRINT, new GetStatisticSprintActionSubCommand(telegram, _dbContext) },
+                { Glossary.Stat.ALL, new GetStatisticAllActionSubCommand(telegram, _dbContext, _logger) },
+                { Glossary.Stat.DATE, new GetStatisticDateActionSubCommand(telegram, _dbContext, _logger) },
+                { Glossary.Stat.SPRINT, new GetStatisticSprintActionSubCommand(telegram, _dbContext, _logger) },
             };
         }
 
@@ -152,7 +152,7 @@ namespace InnovaMRBot.Commands
     {
         public const string SUB_COMMAND = "getstatallactionsubcommand";
 
-        public GetStatisticAllActionSubCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public GetStatisticAllActionSubCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = SUB_COMMAND;
         }
@@ -201,7 +201,7 @@ namespace InnovaMRBot.Commands
     {
         public const string SUB_COMMAND = "getstatsprintactionsubcommand";
 
-        public GetStatisticSprintActionSubCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public GetStatisticSprintActionSubCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = SUB_COMMAND;
         }
@@ -297,7 +297,7 @@ namespace InnovaMRBot.Commands
     {
         public const string SUB_COMMAND = "getstatdateactionsubcommand";
 
-        public GetStatisticDateActionSubCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public GetStatisticDateActionSubCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = SUB_COMMAND;
         }

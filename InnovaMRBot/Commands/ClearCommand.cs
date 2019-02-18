@@ -1,5 +1,6 @@
 ﻿using InnovaMRBot.Repository;
 using System.Threading.Tasks;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Keyboard;
@@ -14,7 +15,7 @@ namespace InnovaMRBot.Commands
 
         public const string COMMANDID = "cancelcommand";
 
-        public ClearCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public ClearCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = COMMANDID;
         }

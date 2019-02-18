@@ -1,7 +1,7 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using InnovaMRBot.Repository;
+using InnovaMRBot.Services;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Keyboard;
@@ -14,7 +14,7 @@ namespace InnovaMRBot.Commands
     {
         private const string COMMAND = "/getcommondocument";
 
-        public CommonDocumentCommand(Telegram telegram, UnitOfWork dbContext) : base(telegram, dbContext)
+        public CommonDocumentCommand(Telegram telegram, UnitOfWork dbContext, Logger logger) : base(telegram, dbContext, logger)
         {
             CommandId = "commondocumentcommand";
         }
