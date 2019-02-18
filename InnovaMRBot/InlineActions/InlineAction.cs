@@ -22,7 +22,7 @@ namespace InnovaMRBot.InlineActions
     {
         private const string MR_REMOVE_PATTERN = @"https?:\/\/gitlab.fortia.fr\/Fortia\/Innova\/merge_requests\/";
 
-        private const int WATCH_TIMEOUT_MINUTE = 1;
+        private const int WATCH_TIMEOUT_MINUTE = 30;
 
         public static readonly Dictionary<string, Func<Update, Telegram, UnitOfWork, Action<Guid, ActionType>, string, Task>> Actions = new Dictionary<string, Func<Update, Telegram, UnitOfWork, Action<Guid, ActionType>, string, Task>>()
         {

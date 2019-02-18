@@ -28,7 +28,7 @@ namespace InnovaMRBot.Commands
 
         private static readonly char[] trimmidChars = new char[] { '\r', '\n', ' ' };
 
-        private const int REVIEW_MR_DELAY_MINUTES = 1;
+        private const int REVIEW_MR_DELAY_MINUTES = 60;
 
         private ChatStateService _chatStateService;
 
