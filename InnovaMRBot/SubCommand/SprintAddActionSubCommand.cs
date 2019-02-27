@@ -27,6 +27,8 @@ namespace InnovaMRBot.SubCommand
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("SprintAddActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, string.Empty);
 
             var responseMessage = new SendMessageRequest()
@@ -38,10 +40,14 @@ namespace InnovaMRBot.SubCommand
             };
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("SprintAddActionSubCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("SprintAddActionSubCommand - Start", GetUserId(update));
+
             var message = update.Message.Text;
 
             UpdateCommand(GetUserId(update), CommandId, message);
@@ -82,6 +88,8 @@ namespace InnovaMRBot.SubCommand
 
                 _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
             }
+
+            _logger.Info("SprintAddActionSubCommand - End", GetUserId(update));
         }
     }
 
@@ -96,6 +104,8 @@ namespace InnovaMRBot.SubCommand
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("SprintAddDateActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, string.Empty);
 
             var responseMessage = new SendMessageRequest()
@@ -107,10 +117,14 @@ namespace InnovaMRBot.SubCommand
             };
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("SprintAddDateActionSubCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("SprintAddDateActionSubCommand - Start", GetUserId(update));
+
             var message = update.Message.Text;
 
             UpdateCommand(GetUserId(update), CommandId, message);
@@ -153,6 +167,7 @@ namespace InnovaMRBot.SubCommand
                 catch (Exception e)
                 {
                     responseMessage = "Please enter dates in format M/dd/yyyy";
+                    _logger.Error(e.Message, GetUserId(update));
                 }
             }
             else
@@ -170,6 +185,8 @@ namespace InnovaMRBot.SubCommand
             };
 
             _telegram.SendMessageAsync(responseMessageRequest).ConfigureAwait(false);
+
+            _logger.Info("SprintAddDateActionSubCommand - End", GetUserId(update));
         }
     }
 }

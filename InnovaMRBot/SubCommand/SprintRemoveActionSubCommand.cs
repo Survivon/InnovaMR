@@ -25,6 +25,8 @@ namespace InnovaMRBot.SubCommand
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("SprintRemoveActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, string.Empty);
 
             var responseMessage = new SendMessageRequest()
@@ -66,10 +68,14 @@ namespace InnovaMRBot.SubCommand
             }
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("SprintRemoveActionSubCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("SprintRemoveActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, update.Message.Text);
 
             var conversations = _dbContext.Conversations.GetAll();
@@ -107,6 +113,8 @@ namespace InnovaMRBot.SubCommand
             request.Text = responseMessage;
             
             _telegram.SendMessageAsync(request).ConfigureAwait(false);
+
+            _logger.Info("SprintRemoveActionSubCommand - End", GetUserId(update));
         }
     }
 }

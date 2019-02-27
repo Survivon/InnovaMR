@@ -37,6 +37,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("ChangeUserRoleCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), COMMANDID, string.Empty);
 
             var keyBoard = new List<KeyboardButton>();
@@ -61,10 +63,12 @@ namespace InnovaMRBot.Commands
                     },
                 },
             }).ConfigureAwait(false);
+            _logger.Info("ChangeUserRoleCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("ChangeUserRoleCommand - Start", GetUserId(update));
             var message = update.Message.Text;
             UpdateCommand(GetUserId(update), COMMANDID, message);
 
@@ -95,6 +99,8 @@ namespace InnovaMRBot.Commands
                     ChatId = update.Message.Chat.Id.ToString(),
                 }).ConfigureAwait(false);
             }
+
+            _logger.Info("ChangeUserRoleCommand - End", GetUserId(update));
         }
     }
 }

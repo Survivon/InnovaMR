@@ -18,6 +18,8 @@ namespace InnovaMRBot.Commands
 {
     public class EditCommand : BaseCommand
     {
+        private const int MAX_DAYS_MR_FOR_CHANGE = 1;
+
         public const string COMMAND = "/edit";
 
         public const string COMMANDID = "editcommand";
@@ -34,6 +36,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("EditCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), COMMANDID, string.Empty);
 
             var message = update.Message.Text;
@@ -51,7 +55,7 @@ namespace InnovaMRBot.Commands
                 };
 
                 var mrs = conversation.ListOfMerge.Where(m =>
-                    m.PublishDate > new DateTimeOffset(DateTime.UtcNow.Subtract(TimeSpan.FromDays(62)))
+                    m.PublishDate > new DateTimeOffset(DateTime.UtcNow.Subtract(TimeSpan.FromDays(MAX_DAYS_MR_FOR_CHANGE)))
                     && CanMrBeChanged(m)
                     && m.OwnerId.Equals(GetUserId(update))).ToList();
 
@@ -104,12 +108,12 @@ namespace InnovaMRBot.Commands
                     var responseMessage = new SendMessageRequest()
                     {
                         ChatId = update.Message.Chat.Id.ToString(),
-                        Text = "Please select MR number from collection",
+                        Text = "You couldn't change description for current MR, please choose MR from collection",
                         FormattingMessageType = FormattingMessageType.Markdown,
                     };
 
                     var mrs = conversation.ListOfMerge.Where(m =>
-                        m.PublishDate > new DateTimeOffset(DateTime.UtcNow.Subtract(TimeSpan.FromDays(62)))
+                        m.PublishDate > new DateTimeOffset(DateTime.UtcNow.Subtract(TimeSpan.FromDays(MAX_DAYS_MR_FOR_CHANGE)))
                         && CanMrBeChanged(m)
                         && m.OwnerId.Equals(GetUserId(update))).ToList();
 
@@ -136,13 +140,19 @@ namespace InnovaMRBot.Commands
                     _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
                 }
             }
+
+            _logger.Info("EditCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("EditCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, update.Message.Text);
 
             new EditMergeNumberActionSubCommand(_telegram, _dbContext, _logger).WorkerAsync(update).ConfigureAwait(false);
+
+            _logger.Info("EditCommand - Start", GetUserId(update));
         }
 
         public static bool CanMrBeChanged(MergeSetting merge)
@@ -176,6 +186,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("EditMergeNumberActionSubCommand - Start", GetUserId(update));
+
             var message = update.Message.Text;
 
             var requestMessage = string.Empty;
@@ -214,10 +226,14 @@ namespace InnovaMRBot.Commands
             responseMessage.Text = requestMessage;
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("EditMergeNumberActionSubCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("EditMergeNumberActionSubCommand - Start", GetUserId(update));
+
             var newDescription = update.Message.Text;
 
             var number = GetCommand(GetUserId(update)).FirstOrDefault(c => c.Command.Equals(EditCommand.COMMANDID));
@@ -283,6 +299,8 @@ namespace InnovaMRBot.Commands
                 _dbContext.Conversations.Update(conversation);
                 ClearCommands(GetUserId(update));
             }
+
+            _logger.Info("EditMergeNumberActionSubCommand - End", GetUserId(update));
         }
     }
 }

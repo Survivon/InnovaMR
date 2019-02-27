@@ -27,6 +27,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("ClearCommand - Start", GetUserId(update));
+
             ClearCommands(GetUserId(update));
             _telegram.SendMessageAsync(new SendMessageRequest
             {
@@ -34,6 +36,8 @@ namespace InnovaMRBot.Commands
                 ChatId = update.Message.Chat.Id.ToString(),
                 ReplyMarkup = new ReplyKeyboardHide() { IsHideKeyboard = true },
             }).ConfigureAwait(false);
+
+            _logger.Info("ClearCommand - End", GetUserId(update));
         }
     }
 }

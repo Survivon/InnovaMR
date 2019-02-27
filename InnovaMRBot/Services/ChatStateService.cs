@@ -1,6 +1,7 @@
 ﻿using InnovaMRBot.Commands;
-using InnovaMRBot.InlineActions;
+using InnovaMRBot.InlineCommands;
 using InnovaMRBot.Models;
+using InnovaMRBot.Models.Enum;
 using InnovaMRBot.Repository;
 using InnovaMRBot.SubCommand;
 using System;
@@ -11,7 +12,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using InnovaMRBot.Models.Enum;
 using TelegramBotApi.Extension;
 using TelegramBotApi.Models;
 using TelegramBotApi.Models.Enum;
@@ -35,6 +35,8 @@ namespace InnovaMRBot.Services
         private object _lockerSaveToDbObject = new object();
 
         private readonly List<BaseCommand> _commands;
+
+        private readonly List<BaseInlineCommand> _inlineCommand;
 
         private readonly Dictionary<Guid, Timer> _scheduler = new Dictionary<Guid, Timer>();
 
@@ -81,6 +83,15 @@ namespace InnovaMRBot.Services
                 new UserSettingTimeZoneSetupCommand(_telegramService, _dbContext, _logger),
             };
 
+            _inlineCommand = new List<BaseInlineCommand>()
+            {
+                new BadReactionInlineCommand(_telegramService, _dbContext, SchedulerAction, _logger),
+                new MergeStatisticInlineCommand(_telegramService, _dbContext, SchedulerAction, _logger),
+                new PositiveReactionInlineCommand(_telegramService, _dbContext, SchedulerAction, _logger),
+                new WatchInlineCommand(_telegramService, _dbContext, SchedulerAction, _logger),
+                new EditInlineCommand(_telegramService, _dbContext, SchedulerAction, _logger),
+            };
+
             //Init MRs unmarked
             InitAction();
         }
@@ -91,6 +102,7 @@ namespace InnovaMRBot.Services
             {
                 var message = update.Message.Text;
                 var userId = update.Message.Sender.Id.ToString();
+                _logger.Info("GetUpdateFromTelegramAsync - Message - Start", userId);
 
                 var user = _dbContext.Users.GetAll().FirstOrDefault(u => u.UserId.Equals(userId));
 
@@ -116,9 +128,13 @@ namespace InnovaMRBot.Services
 
                     command?.WorkerAsync(update).ConfigureAwait(false);
                 }
+
+                _logger.Info("GetUpdateFromTelegramAsync - Message - End", userId);
             }
             else if (update.ChanelMessage != null)
             {
+                _logger.Info("GetUpdateFromTelegramAsync - ChanelMessage - Start", update.ChanelMessage.Sender.Id.ToString());
+
                 // for work with chanel messages
                 var message = update.ChanelMessage.Text;
                 var answerMessages = new List<SendMessageRequest>();
@@ -138,37 +154,24 @@ namespace InnovaMRBot.Services
 
                     _telegramService.SendMessageAsync(sendMessageRequest).ConfigureAwait(false);
                 }
+
+                _logger.Info("GetUpdateFromTelegramAsync - ChanelMessage - End", update.ChanelMessage.Sender.Id.ToString());
             }
             else if (update.CallbackQuery != null)
             {
-                if (InlineAction.Actions.ContainsKey(update.CallbackQuery.Data))
-                {
-                    InlineAction.Actions[update.CallbackQuery.Data].Invoke(update, _telegramService, _dbContext, SchedulerAction, string.Empty)
-                        .ConfigureAwait(false);
-                }
-                else
-                {
-                    if (update.CallbackQuery.Data.StartsWith(Glossary.InlineAction.SUCCESS_REACTION_MR))
-                    {
-                        var messageId = update.CallbackQuery.Data.Replace(Glossary.InlineAction.SUCCESS_REACTION_MR, string.Empty);
-                        InlineAction.Actions[Glossary.InlineAction.SUCCESS_REACTION].Invoke(update, _telegramService, _dbContext, SchedulerAction, messageId)
-                            .ConfigureAwait(false);
-                    }
-                    else if (update.CallbackQuery.Data.StartsWith(Glossary.InlineAction.BAD_REACTION_MR))
-                    {
-                        var messageId = update.CallbackQuery.Data.Replace(Glossary.InlineAction.BAD_REACTION_MR, string.Empty);
-                        InlineAction.Actions[Glossary.InlineAction.BAD_REACTION].Invoke(update, _telegramService, _dbContext, SchedulerAction, messageId)
-                            .ConfigureAwait(false);
-                    }
-                }
+                _logger.Info("GetUpdateFromTelegramAsync - CallbackQuery - Start", update.CallbackQuery.Sender.Id.ToString());
+                var command = _inlineCommand.FirstOrDefault(c => c.IsThisInlineCommand(update.CallbackQuery.Data));
+
+                command?.WorkerAsync(update, string.Empty);
+                _logger.Info("GetUpdateFromTelegramAsync - CallbackQuery - End", update.CallbackQuery.Sender.Id.ToString());
             }
             else if (update.InlineQuery != null)
             {
-
+                _logger.Info("GetUpdateFromTelegramAsync - InlineQuery - Start", update.InlineQuery.Sender.Id.ToString());
             }
             else if (update.InlineResult != null)
             {
-
+                _logger.Info("GetUpdateFromTelegramAsync - InlineResult - Start", update.InlineResult.Sender.Id.ToString());
             }
 
             lock (_lockerSaveToDbObject)
@@ -177,13 +180,13 @@ namespace InnovaMRBot.Services
             }
         }
 
-        public void SchedulerAction(Guid id, ActionType type)
+        public void SchedulerAction(Guid id, DateTime execDate, ActionType type)
         {
+            _logger.Info($"SchedulerAction Start with {type.ToString()}", "system");
+
             if (type == ActionType.Add)
             {
-                var action = _dbContext.Actions.Get(id);
-
-                var needTimeToStart = action.ExecDate.Subtract(DateTime.UtcNow);
+                var needTimeToStart = execDate.Subtract(DateTime.UtcNow);
 
                 var data = new object[] { _dbContext, _telegramService, id.ToString() };
 
@@ -202,10 +205,14 @@ namespace InnovaMRBot.Services
                     _scheduler.Remove(id);
                 }
             }
+
+            _logger.Info($"SchedulerAction End with {type.ToString()}", "system");
         }
 
         private void SchedulerActionCallBack(object state)
         {
+            _logger.Info($"SchedulerActionCallBack Start", "system");
+
             var getData = state as object[];
 
             var dbContext = getData[0] as UnitOfWork;
@@ -238,10 +245,14 @@ namespace InnovaMRBot.Services
                     ClearTempData(dbContext, action);
                     break;
             }
+
+            _logger.Info($"SchedulerActionCallBack End", "system");
         }
 
         private void WatchNotification(UnitOfWork unitOfWork, Action action, Telegram telegram, MergeSetting merge)
         {
+            _logger.Info($"WatchNotification Start", "system");
+
             var owner = unitOfWork.Users.GetAll().FirstOrDefault(c => c.UserId.Equals(merge.OwnerId));
 
             telegram.SendMessageAsync(new SendMessageRequest()
@@ -279,18 +290,21 @@ namespace InnovaMRBot.Services
 
             unitOfWork.Actions.Update(action);
             unitOfWork.Save();
+
+            _logger.Info($"WatchNotification End", "system");
         }
 
         private void ReviewNotification(UnitOfWork unitOfWork, Action action, Telegram telegram, MergeSetting merge)
         {
+            _logger.Info($"ReviewNotification Start", "system");
+
             var users = _dbContext.Users.GetAll();
 
             var last = GetLastVersion(merge);
             var owner = unitOfWork.Users.GetAll().FirstOrDefault(c => c.UserId.Equals(merge.OwnerId));
 
-            var neededUsers = users.Where(u =>
-                u.UserId != merge.OwnerId &&
-                !last.Reactions.Any(r => r.UserId == u.UserId && r.ReactionType == ReactionType.Watch) && u.Role == UserRole.Dev).ToList();
+            var neededUsers = users.Where(u => u.UserId != merge.OwnerId)
+                .Where(u => last.Reactions.All(r => r.UserId != u.UserId) && u.Role == UserRole.Dev).ToList();
 
             foreach (var neededUser in neededUsers)
             {
@@ -331,10 +345,14 @@ namespace InnovaMRBot.Services
 
             unitOfWork.Actions.Update(action);
             unitOfWork.Save();
+
+            _logger.Info($"ReviewNotification End", "system");
         }
 
         private void ClearTempData(UnitOfWork unitOfWork, Action action)
         {
+            _logger.Info($"ClearTempData Start", "system");
+
             var directoryPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "wwwroot",
@@ -372,26 +390,32 @@ namespace InnovaMRBot.Services
             unitOfWork.Actions.Create(clearAction);
             unitOfWork.Save();
 
-            SchedulerAction(clearAction.Id, ActionType.Add);
+            SchedulerAction(clearAction.Id, clearAction.ExecDate, ActionType.Add);
+
+            _logger.Info($"ClearTempData End", "system");
         }
 
         private void InitAction()
         {
+            _logger.Info($"InitAction Start", "system");
+
             var actions = _dbContext.Actions.GetAll();
 
             if (actions.Any(a => a.IsActive) && !_scheduler.Any())
             {
                 foreach (var action in actions.Where(a => a.IsActive))
                 {
-                    SchedulerAction(action.Id, ActionType.Add);
+                    SchedulerAction(action.Id, action.ExecDate, ActionType.Add);
                 }
             }
 
-            var dbUnmarkedAction = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.UNMARKED) && a.IsActive);
+            var dbUnmarkedAction = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.UNMARKED) && a.IsActive && a.ExecDate > DateTime.UtcNow);
             if (dbUnmarkedAction == null)
             {
+#if DEBUG
+                var needTimeTime = DateTime.UtcNow.AddMinutes(1);
+#else
                 var needTimeTime = DateTime.UtcNow;
-
                 if (needTimeTime.Hour >= 15)
                 {
                     needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day + 1, 15, 0, 0);
@@ -400,6 +424,7 @@ namespace InnovaMRBot.Services
                 {
                     needTimeTime = new DateTime(needTimeTime.Year, needTimeTime.Month, needTimeTime.Day, 15, 0, 0);
                 }
+#endif
 
                 var unmarkedAction = new Action()
                 {
@@ -413,10 +438,10 @@ namespace InnovaMRBot.Services
                 _dbContext.Actions.Create(unmarkedAction);
                 _dbContext.Save();
 
-                SchedulerAction(unmarkedAction.Id, ActionType.Add);
+                SchedulerAction(unmarkedAction.Id, unmarkedAction.ExecDate, ActionType.Add);
             }
 
-            var dbClearTempDataAction = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.CLEAR_TEMP_DATA) && a.IsActive);
+            var dbClearTempDataAction = actions.FirstOrDefault(a => a.ActionMethod.Equals(Glossary.ActionType.CLEAR_TEMP_DATA) && a.IsActive && a.ExecDate > DateTime.UtcNow);
             if (dbClearTempDataAction == null)
             {
                 var needTime = DateTime.UtcNow.AddHours(5);
@@ -433,13 +458,16 @@ namespace InnovaMRBot.Services
                 _dbContext.Actions.Create(clearAction);
                 _dbContext.Save();
 
-                SchedulerAction(clearAction.Id, ActionType.Add);
+                SchedulerAction(clearAction.Id, clearAction.ExecDate, ActionType.Add);
             }
 
+            _logger.Info($"InitAction End", "system");
         }
 
         private void UnmarkedNotification(UnitOfWork unitOfWork, Action action, Telegram telegram)
         {
+            _logger.Info($"UnmarkedNotification Start", "system");
+
             var conv = unitOfWork.Conversations.GetAll();
 
             var needConversation = conv.FirstOrDefault();
@@ -454,7 +482,7 @@ namespace InnovaMRBot.Services
             {
                 var lastVersion = GetLastVersion(merge);
 
-                if (lastVersion.Reactions.Count < 2)
+                if (lastVersion.Reactions.Count(c => c.ReactionType == ReactionType.Like) < 2)
                 {
                     needMR.Add(new Tuple<string, string, int>(merge.Owner.Name, merge.MrUrl, 2 - lastVersion.Reactions.Count));
                 }
@@ -511,7 +539,9 @@ namespace InnovaMRBot.Services
             unitOfWork.Actions.Create(unmarkedAction);
             unitOfWork.Save();
 
-            SchedulerAction(unmarkedAction.Id, ActionType.Add);
+            SchedulerAction(unmarkedAction.Id, unmarkedAction.ExecDate, ActionType.Add);
+
+            _logger.Info($"UnmarkedNotification End", "system");
         }
 
         private static void MapUsers(List<MergeSetting> merge, List<Models.User> usersList)

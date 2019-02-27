@@ -25,6 +25,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("HelpCommand - Start", GetUserId(update));
+
             _telegram.SendMessageAsync(new SendMessageRequest
             {
                 Text = @"<b>How to send MR?</b>
@@ -40,6 +42,8 @@ For all of this statistics you can add start and end date of publish date(For ex
                 ChatId = update.Message.Chat.Id.ToString(),
                 FormattingMessageType = FormattingMessageType.HTML,
             }).ConfigureAwait(false);
+
+            _logger.Info("HelpCommand - End", GetUserId(update));
         }
     }
 }

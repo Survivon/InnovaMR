@@ -27,6 +27,8 @@ namespace InnovaMRBot.SubCommand
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("SprintUpdateActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, string.Empty);
 
             var responseMessage = new SendMessageRequest()
@@ -59,13 +61,19 @@ namespace InnovaMRBot.SubCommand
             responseMessage.ReplyMarkup = keyboardArray;
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("SprintUpdateActionSubCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("SprintUpdateActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, update.Message.Text);
 
             new SprintUpdateDateActionSubCommand(_telegram, _dbContext, _logger).WorkerAsync(update).ConfigureAwait(false);
+
+            _logger.Info("SprintUpdateActionSubCommand - End", GetUserId(update));
         }
     }
 
@@ -80,6 +88,8 @@ namespace InnovaMRBot.SubCommand
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("SprintUpdateDateActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, string.Empty);
 
             var responseMessage = new SendMessageRequest()
@@ -91,10 +101,14 @@ namespace InnovaMRBot.SubCommand
             };
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("SprintUpdateDateActionSubCommand - End", GetUserId(update));
         }
         
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("SprintUpdateDateActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, update.Message.Text);
 
             var message = update.Message.Text;
@@ -153,6 +167,8 @@ namespace InnovaMRBot.SubCommand
             };
 
             _telegram.SendMessageAsync(responseMessageRequest).ConfigureAwait(false);
+
+            _logger.Info("SprintUpdateDateActionSubCommand - End", GetUserId(update));
         }
     }
 }

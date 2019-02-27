@@ -69,6 +69,8 @@ namespace InnovaMRBot.Commands
 
         protected void UpdateCommand(string userId, string command, string answer)
         {
+            _logger.Info("BaseCommand - Start", userId);
+
             var user = _dbContext.Users.GetAll().FirstOrDefault(u => u.UserId.Equals(userId));
 
             user.Commands.RemoveAll(c => c.Command.Equals(command));
@@ -84,6 +86,8 @@ namespace InnovaMRBot.Commands
 
         protected void RemoveLastCommand(string userId)
         {
+            _logger.Info("BaseCommand - Start", userId);
+
             var user = _dbContext.Users.GetAll().FirstOrDefault(u => u.UserId.Equals(userId));
 
             user.Commands.Remove(user.Commands.LastOrDefault());
@@ -93,6 +97,8 @@ namespace InnovaMRBot.Commands
 
         protected List<CommandCollection> GetCommand(string userId)
         {
+            _logger.Info("BaseCommand - Start", userId);
+
             var user = _dbContext.Users.GetAll().FirstOrDefault(u => u.UserId.Equals(userId));
 
             return user.Commands;
@@ -100,6 +106,8 @@ namespace InnovaMRBot.Commands
 
         protected void ClearCommands(string userId)
         {
+            _logger.Info("BaseCommand - Start", userId);
+
             var user = _dbContext.Users.GetAll().FirstOrDefault(u => u.UserId.Equals(userId));
 
             user.Commands = new List<CommandCollection>();

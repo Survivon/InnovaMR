@@ -31,6 +31,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("StartCommand - Start", GetUserId(update));
+
             var savedUser = new User
             {
                 Name = update.Message.Sender.GetUserFullName(),
@@ -45,6 +47,8 @@ namespace InnovaMRBot.Commands
                 ChatId = update.Message.Chat.Id.ToString(),
                 Text = $"Hi, {savedUser.Name}! I'm Bot for help to work with MR for Innova 😊 If you have some question please send me /help or visit http://innovamrbot.azurewebsites.net/",
             }).ConfigureAwait(false);
+
+            _logger.Info("StartCommand - Start", GetUserId(update));
         }
     }
 }

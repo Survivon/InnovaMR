@@ -43,6 +43,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("GetStatisticCommand - Start", GetUserId(update));
+
             var userId = update.Message.Sender.Id.ToString();
             var message = update.Message.Text;
 
@@ -124,10 +126,14 @@ namespace InnovaMRBot.Commands
                     _telegram.SendDocumentAsync(responseMessageForUser, result).ConfigureAwait(false);
                 }
             }
+
+            _logger.Info("GetStatisticCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("GetStatisticCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), GetPrevCommand(GetUserId(update)), update.Message.Text);
 
             var answer = update.Message.Text;
@@ -136,6 +142,8 @@ namespace InnovaMRBot.Commands
             {
                 _subCommand[answer].WorkerAsync(update).ConfigureAwait(false);
             }
+
+            _logger.Info("GetStatisticCommand - End", GetUserId(update));
         }
 
         private string GetPrevCommand(string userId)
@@ -159,6 +167,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("GetStatisticAllActionSubCommand - Start", GetUserId(update));
+
             var message = update.Message.Text;
 
             if (message.Equals(Glossary.Stat.ALL))
@@ -194,6 +204,8 @@ namespace InnovaMRBot.Commands
                     ClearCommands(GetUserId(update));
                 }
             }
+
+            _logger.Info("GetStatisticAllActionSubCommand - End", GetUserId(update));
         }
     }
 
@@ -208,6 +220,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("GetStatisticSprintActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, string.Empty);
 
             var responseMessage = new SendMessageRequest()
@@ -240,10 +254,14 @@ namespace InnovaMRBot.Commands
             responseMessage.ReplyMarkup = keyboardArray;
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("GetStatisticSprintActionSubCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("GetStatisticSprintActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, update.Message.Text);
 
             if (int.TryParse(update.Message.Text, out int number))
@@ -290,6 +308,8 @@ namespace InnovaMRBot.Commands
                     ClearCommands(GetUserId(update));
                 }
             }
+
+            _logger.Info("GetStatisticSprintActionSubCommand - End", GetUserId(update));
         }
     }
 
@@ -304,6 +324,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("GetStatisticDateActionSubCommand - Start", GetUserId(update));
+
             UpdateCommand(GetUserId(update), CommandId, string.Empty);
 
             var responseMessage = new SendMessageRequest()
@@ -314,10 +336,14 @@ namespace InnovaMRBot.Commands
             };
 
             _telegram.SendMessageAsync(responseMessage).ConfigureAwait(false);
+
+            _logger.Info("GetStatisticDateActionSubCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("GetStatisticDateActionSubCommand - Start", GetUserId(update));
+
             var message = update.Message.Text;
 
             UpdateCommand(GetUserId(update), CommandId, message);
@@ -356,6 +382,7 @@ namespace InnovaMRBot.Commands
                     catch (Exception e)
                     {
                         responseMessage = "Please enter dates in format M/dd/yyyy";
+                        _logger.Error(e.Message, GetUserId(update));
                     }
                 }
             }
@@ -385,6 +412,8 @@ namespace InnovaMRBot.Commands
                     ReplyMarkup = new ReplyKeyboardHide() { IsHideKeyboard = true },
                 }).ConfigureAwait(false);
             }
+
+            _logger.Info("GetStatisticDateActionSubCommand - End", GetUserId(update));
         }
     }
 }

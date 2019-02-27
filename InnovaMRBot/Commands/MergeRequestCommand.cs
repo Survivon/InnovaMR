@@ -65,6 +65,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("MergeRequestCommand - Start", GetUserId(update));
+
             var convesationId = update.Message.Chat.Id.ToString();
 
             var responseMessage = new SendMessageRequest
@@ -150,7 +152,7 @@ namespace InnovaMRBot.Commands
                 _dbContext.Actions.Create(action);
                 _dbContext.Save();
 
-                _chatStateService.SchedulerAction(action.Id, ActionType.Add);
+                _chatStateService.SchedulerAction(action.Id, action.ExecDate, ActionType.Add);
                 
                 versionedTicket.Id = resMessage.Id.ToString();
                 responseMessageForUser.Text = "Well done! I'll send it 😊" +
@@ -270,7 +272,7 @@ namespace InnovaMRBot.Commands
                 _dbContext.Actions.Create(action);
                 _dbContext.Save();
 
-                _chatStateService.SchedulerAction(action.Id, ActionType.Add);
+                _chatStateService.SchedulerAction(action.Id, action.ExecDate, ActionType.Add);
 
                 mrMessage.TelegramMessageId = resMessage.Id.ToString();
 
@@ -280,6 +282,7 @@ namespace InnovaMRBot.Commands
             }
 
             _dbContext.Save();
+            _logger.Info("MergeRequestCommand - End", GetUserId(update));
         }
 
         private void SetupError(MergeErrorType type, SendMessageRequest responseMessageForUser)

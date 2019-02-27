@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -46,6 +45,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("SprintCommand - Start", GetUserId(update));
+
             var userId = update.Message.Sender.Id.ToString();
             var message = update.Message.Text;
 
@@ -117,10 +118,13 @@ namespace InnovaMRBot.Commands
             }
 
             _dbContext.Save();
+            _logger.Info("SprintCommand - End", GetUserId(update));
         }
 
         public override async Task WorkOnAnswerAsync(Update update)
         {
+            _logger.Info("SprintCommand - Start", GetUserId(update));
+
             UpdateCommand(update.Message.Sender.Id.ToString(), CommandId, update.Message.Text);
 
             var answer = update.Message.Text;
@@ -129,6 +133,8 @@ namespace InnovaMRBot.Commands
             {
                 _subCommand[answer].WorkerAsync(update).ConfigureAwait(false);
             }
+
+            _logger.Info("SprintCommand - End", GetUserId(update));
         }
 
         #region Actions

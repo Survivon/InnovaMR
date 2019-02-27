@@ -6,6 +6,8 @@ namespace InnovaMRBot.Models
 {
     public class Log
     {
+        public Guid Id { get; set; }
+
         public string MethodName { get; set; }
 
         public DateTime ExecDate { get; set; }

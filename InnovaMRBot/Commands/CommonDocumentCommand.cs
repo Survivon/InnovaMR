@@ -26,6 +26,8 @@ namespace InnovaMRBot.Commands
 
         public override async Task WorkerAsync(Update update)
         {
+            _logger.Info("CommonDocumentCommand - Start", GetUserId(update));
+
             _telegram.SendMessageAsync(new SendMessageRequest
             {
                 Text = "Document Link",
@@ -46,6 +48,8 @@ namespace InnovaMRBot.Commands
                     },
                 },
             }).ConfigureAwait(false);
+
+            _logger.Info("CommonDocumentCommand - End", GetUserId(update));
         }
     }
 }
